@@ -1,0 +1,1 @@
+const electron = require('electron'); console.log('Keys of original require electron:', Object.keys(electron));

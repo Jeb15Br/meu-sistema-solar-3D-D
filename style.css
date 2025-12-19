@@ -1,0 +1,241 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: #000;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: white;
+}
+
+#ui-container {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 15px;
+    border-radius: 15px;
+    -webkit-backdrop-filter: blur(5px);
+    backdrop-filter: blur(5px);
+}
+
+#timeSlider {
+    width: 300px;
+    cursor: pointer;
+}
+
+#info-panel {
+    position: absolute;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 300px;
+    background: rgba(20, 20, 40, 0.85);
+    padding: 20px;
+    border-radius: 10px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+#info-panel.hidden {
+    transform: translateY(-50%) translateX(110%);
+    opacity: 0;
+    pointer-events: none;
+}
+
+#close-info {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 1.2rem;
+    cursor: pointer;
+}
+
+#audio-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    border: 1px solid white;
+    padding: 5px 10px;
+    border-radius: 5px;
+    cursor: pointer;
+    z-index: 20;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    /* Changed to flex to hold row */
+    flex-direction: column;
+    align-items: center;
+    /* Center horizontally */
+}
+
+.controls-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+    justify-content: center;
+}
+
+.slider-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.date-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+input[type=range] {
+    width: 200px;
+    margin: 5px 0;
+}
+
+.speed-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#real-time-btn {
+    padding: 2px 8px;
+    background: rgba(0, 255, 100, 0.2);
+    border: 1px solid rgba(0, 255, 100, 0.4);
+    color: #afa;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: all 0.2s;
+}
+
+#real-time-btn.active {
+    background: rgba(0, 255, 100, 0.6);
+    color: white;
+    box-shadow: 0 0 10px rgba(0, 255, 100, 0.4);
+}
+
+#time-display {
+    font-size: 0.9rem;
+    color: #ccc;
+    min-width: 100px;
+    text-align: right;
+}
+
+#date-display {
+    font-size: 1rem;
+    color: #fff;
+    font-weight: bold;
+    min-width: 150px;
+    text-align: center;
+    margin-top: 5px;
+}
+
+#reset-date-btn {
+    padding: 5px 15px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: background 0.2s;
+}
+
+#reset-date-btn:hover {
+    background: rgba(255, 255, 255, 0.4);
+}
+
+#start-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    /* display: none; Managed by JS, but default hidden via class or strict style if needed */
+    display: none;
+    z-index: 9999;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    color: white;
+}
+
+#start-btn {
+    padding: 15px 40px;
+    font-size: 1.5rem;
+    background: #0088ff;
+    border: none;
+    color: white;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 20px;
+    box-shadow: 0 0 15px #0088ff;
+    transition: transform 0.2s;
+}
+
+#start-btn:hover {
+    transform: scale(1.1);
+}
+
+.planet-label.hovered {
+    text-shadow: 0 0 10px #ffff00;
+    font-size: 16px;
+    color: #ffff00;
+}
+
+/* Planet Labels */
+.planet-label {
+    text-shadow: 0 0 4px black;
+    font-size: 14px;
+    color: white;
+    font-weight: bold;
+    pointer-events: none;
+    /* Let clicks pass through to 3D objects */
+    /* Implementation of "line" visual usually done via border or pseudo-element */
+    /* We will position the label slightly offset and draw a line using CSS or simplified approach */
+}
+
+.label-container {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    pointer-events: none; /* Garantir que cliques passem pro Canvas */
+    /* Aligns line and text */
+}
+
+.label-text {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 2px 5px;
+    border-radius: 4px;
+}
+
+.label-line {
+    width: 2px;
+    height: 30px;
+    background-color: white;
+    margin-left: 10px;
+    /* Offset line from text center if desired, or center it */
+    transform-origin: top;
+    /* We want the line to go FROM the planet TO the text. 
+       Usually the CSS object is at the planet center. 
+       So we offset the text up/right and draw a line back.
+    */
+}

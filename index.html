@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Solar System</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.170.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.170.0/examples/jsm/"
+            }
+        }
+    </script>
+    </script>
+    <!-- RPOD: Red Panel of Death (Global Error Handler) -->
+    <script src="rpod.js"></script>
+</head>
+
+<body>
+    <div id="ui-container">
+        <div class="controls-row">
+            <div class="slider-group">
+                <label for="timeSlider">Controle de Tempo</label>
+                <input type="range" id="timeSlider" min="-50" max="50" step="1" value="0">
+                <div class="speed-row">
+                    <div id="time-display">Velocidade: Tempo Real</div>
+                    <button id="real-time-btn" title="Reiniciar para Agora">Tempo Real</button>
+                </div>
+            </div>
+            <div class="date-group">
+                <div id="date-display">...</div>
+                <button id="reset-date-btn" style="display: none;">Hoje</button>
+                <!-- Hidden as RealTime now does this -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Overlay - REMOVED -->
+    <!-- <div id="start-overlay"></div> -->
+
+    <!-- Info Panel -->
+    <div id="info-panel" class="hidden">
+        <button id="close-info">X</button>
+        <h2 id="info-name">Planeta</h2>
+        <p><strong>Idade:</strong> <span id="info-age"></span></p>
+        <p><strong>Tipo:</strong> <span id="info-type"></span></p>
+        <p><strong>Translação:</strong> <span id="info-translation"></span></p>
+        <p><strong>Rotação:</strong> <span id="info-rotation"></span></p>
+        <p><strong>Luas:</strong> <span id="info-moons"></span></p>
+        <p id="info-desc">Descrição...</p>
+    </div>
+
+    <!-- Audio -->
+    <audio id="bg-music" loop>
+        <!-- Coloque seu arquivo 'music.mp3' na pasta 'assets' -->
+        <source src="assets/music.mp3" type="audio/mp3">
+        <!-- Fallback para teste se não houver arquivo local -->
+        <source src="https://assets.mixkit.co/music/preview/mixkit-stars-in-space-605.mp3" type="audio/mp3">
+        Your browser does not support the audio element.
+    </audio>
+    <button id="audio-btn">🔈 Música</button>
+
+    <script type="module" src="main.js?v=62"></script>
+</body>
+
+</html>

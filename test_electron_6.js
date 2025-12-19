@@ -1,0 +1,1 @@
+console.log('Built-in electron:', process.builtInModules ? process.builtInModules.includes('electron') : 'unknown');

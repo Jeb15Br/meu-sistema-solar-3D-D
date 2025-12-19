@@ -1,0 +1,14 @@
+{
+  "name": "sistema-solar-3d",
+  "version": "1.0.0",
+  "description": "Uma simulação 3D interativa do Sistema Solar feita com Three.js.",
+  "main": "app.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "Jeb15Br & Antigravity",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0"
+  }
+}

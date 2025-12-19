@@ -1,0 +1,13 @@
+[
+    {
+        "id": "start-server",
+        "name": "Start Local Server",
+        "tasks": [
+            {
+                "id": "run-http-server",
+                "description": "Start a local HTTP server on port 8080",
+                "command": "npx -y http-server -p 8080"
+            }
+        ]
+    }
+]

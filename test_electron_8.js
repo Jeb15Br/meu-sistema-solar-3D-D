@@ -1,0 +1,1 @@
+try { console.log(require.resolve('electron')); } catch(e) { console.log(e.message); }

@@ -1,0 +1,1 @@
+const electron = require('electron'); if (typeof electron === 'string') { console.log('Electron is a string path, probably a stub.'); } else { console.log('Electron is an object.'); }

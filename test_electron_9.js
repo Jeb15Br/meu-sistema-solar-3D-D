@@ -1,0 +1,1 @@
+console.log('Main Module Keys:', process.mainModule ? Object.keys(process.mainModule) : 'none'); console.log('Binding electron:', process._linkedBinding ? !!process._linkedBinding('electron') : 'no linked binding');

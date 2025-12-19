@@ -1,0 +1,1 @@
+const electron = require('electron'); console.log('Context Isolation:', process.type); console.log('Electron:', electron);
