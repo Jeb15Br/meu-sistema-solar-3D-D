@@ -6,7 +6,7 @@
   "scripts": {
     "start": "electron ."
   },
-  "author": "Jeb15Br & Antigravity",
+  "author": "Jeb15Br",
   "license": "MIT",
   "devDependencies": {
     "electron": "^33.0.0"

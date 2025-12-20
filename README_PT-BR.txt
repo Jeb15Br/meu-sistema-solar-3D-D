@@ -25,4 +25,4 @@ Para rodar como um programa de janela:
 Isso abrirá o Sistema Solar em uma janela própria!
 
 ---
-Desenvolvido por Jeb15Br e Antigravity AI.
+Desenvolvido por Jeb15Br.
