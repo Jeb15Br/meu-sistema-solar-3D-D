@@ -967,6 +967,10 @@ function resetSolarSystem() {
 
     closeInfo(); // Close info panel
 
+    // Garantir que controles e flags de voo sejam resetados
+    isFlying = false;
+    controls.enabled = true;
+
     // Adjust Camera if too close (User Request: "Sol na cara")
     const sunPos = sun ? sun.mesh.position : new THREE.Vector3(0, 0, 0);
     const dist = camera.position.distanceTo(sunPos);
@@ -977,8 +981,11 @@ function resetSolarSystem() {
         if (direction.lengthSq() === 0) direction.set(0, 0, 1);
 
         const newPos = sunPos.clone().add(direction.multiplyScalar(150));
-        // Animate or set directly? Setting directly for instant reset feel is usually better for "Reset" actions
         camera.position.copy(newPos);
+        controls.target.copy(sunPos);
+        controls.update();
+    } else {
+        // Mesmo que a distância esteja boa, garantir que o target esteja no sol no momento do reset
         controls.target.copy(sunPos);
         controls.update();
     }
