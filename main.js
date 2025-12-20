@@ -759,43 +759,45 @@ function animate() {
     }
 
     const moveSpeed = 2 * (timeScale > 0 ? 1 : 1);
+    const moveTotal = new THREE.Vector3();
     const cameraSpeed = 5;
-    const isMoving = keyState['KeyW'] || keyState['ArrowUp'] || keyState['KeyS'] || keyState['ArrowDown'] || keyState['KeyA'] || keyState['ArrowLeft'] || keyState['KeyD'] || keyState['ArrowRight'];
-
-    if (isMoving && focusedBody) {
-        return;
-    }
 
     if (keyState['KeyW'] || keyState['ArrowUp']) {
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
-        forward.multiplyScalar(cameraSpeed);
-        camera.position.add(forward);
+        moveTotal.add(forward.multiplyScalar(cameraSpeed));
     }
     if (keyState['KeyS'] || keyState['ArrowDown']) {
         const forward = new THREE.Vector3();
         camera.getWorldDirection(forward);
-        forward.multiplyScalar(-cameraSpeed);
-        camera.position.add(forward);
+        moveTotal.add(forward.multiplyScalar(-cameraSpeed));
     }
     if (keyState['KeyA'] || keyState['ArrowLeft']) {
         const right = new THREE.Vector3();
         camera.getWorldDirection(right);
-        right.cross(camera.up).normalize().multiplyScalar(-cameraSpeed);
-        camera.position.add(right);
+        right.cross(camera.up).normalize();
+        moveTotal.add(right.multiplyScalar(-cameraSpeed));
     }
     if (keyState['KeyD'] || keyState['ArrowRight']) {
         const right = new THREE.Vector3();
         camera.getWorldDirection(right);
-        right.cross(camera.up).normalize().multiplyScalar(cameraSpeed);
-        camera.position.add(right);
+        right.cross(camera.up).normalize();
+        moveTotal.add(right.multiplyScalar(cameraSpeed));
     }
 
-    if (isMoving && !focusedBody) {
-        const forward = new THREE.Vector3();
-        camera.getWorldDirection(forward);
-        controls.target.copy(camera.position).add(forward.multiplyScalar(10));
-        controls.update();
+    const isMoving = moveTotal.lengthSq() > 0;
+
+    if (isMoving && focusedBody) {
+        // Se estiver focado, não permite mover com teclas para não quebrar o acompanhamento
+        return;
+    }
+
+    if (isMoving) {
+        camera.position.add(moveTotal);
+        if (!focusedBody) {
+            controls.target.add(moveTotal);
+            controls.update();
+        }
     }
 
     if (controls.enabled) {
