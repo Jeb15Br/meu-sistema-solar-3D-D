@@ -4,7 +4,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { solarSystemData } from './planet-data.js?v=13';
+import { solarSystemData } from './planet-data.js?v=20';
 import { textureGenerator } from './texture-generator.js';
 
 // --- AUDIO MANAGER ---
@@ -15,7 +15,7 @@ const audioManager = {
     btn: document.getElementById('audio-btn'),
     hoverSound: new Audio('assets/sound_effects/click.mp3'),
     init: function () {
-        this.hoverSound.volume = 0.2;
+        this.hoverSound.volume = 1.0;
         this.hoverSound.load();
         this.discoverTracks();
         this.initSpecialAssets();
@@ -35,7 +35,7 @@ const audioManager = {
 
     playHover: function () {
         const s = this.hoverSound.cloneNode();
-        s.volume = 0.2;
+        s.volume = 1.0;
         s.play().catch(() => { });
     },
     playSecretAction: function (category = 'pluto') {
@@ -130,7 +130,7 @@ audioManager.init();
 // Global State
 let scene, camera, renderer, labelRenderer, controls, composer;
 let celestialBodies = [];
-let asteroidSystem, kuiperSystem;
+let asteroidSystem, kuiperSystem, sunLight;
 // Time Scale Logic
 // 1.0 = 1 day per frame (approx 60 days/sec) - OLD LOGIC
 // NEW LOGIC: isRealTime flag controls default.
@@ -142,9 +142,15 @@ let asteroidSystem, kuiperSystem;
 // So for real time, timeScale should be 1/86400.
 let timeScale = 1 / 86400; // Default to Real Time
 let isRealTime = true;
+let isTimePaused = false;
 let currentDate = new Date(); // Start "today" logic
+let currentYearAstronomical = null; // Used for years beyond JS Date limits (e.g. 5 Billion)
+const clock = new THREE.Clock();
 
 let focusedBody = null;
+let explosionActive = false;
+let explosionPhase = 0; // 0: Stable, 1: Expansion, 3: Fade-out/White Dwarf
+let whiteDwarfMesh = null;
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let hoveredBody = null;
@@ -165,7 +171,7 @@ function init() {
     scene.background = new THREE.Color(0x000005);
     addStarField();
 
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 10000);
+    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 10000);
     camera.position.set(0, 100, 250);
 
     renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
@@ -184,10 +190,10 @@ function init() {
     controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.1;
-    controls.maxDistance = 2000;
-    controls.minDistance = 0.5;
+    controls.maxDistance = 5000;
+    controls.minDistance = 0.1;
     controls.enableZoom = true;
-    controls.zoomSpeed = 2.0;
+    controls.zoomSpeed = 5.0;
 
     controls.mouseButtons = {
         LEFT: THREE.MOUSE.ROTATE,
@@ -195,7 +201,7 @@ function init() {
         RIGHT: THREE.MOUSE.PAN
     };
 
-    const sunLight = new THREE.PointLight(0xffffff, 400, 1500);
+    sunLight = new THREE.PointLight(0xffffff, 400, 1500);
     sunLight.decay = 1.5;
     sunLight.castShadow = true;
     sunLight.shadow.mapSize.width = 4096;
@@ -298,14 +304,35 @@ function init() {
     document.getElementById('close-info').addEventListener('click', closeInfo);
     document.getElementById('audio-btn').addEventListener('click', toggleAudio);
 
-    // Initial state check (if browser cached slider value)
-    const slider = document.getElementById('timeSlider');
-    if (slider.value != 0) {
-        updateTimeScale(slider.value);
-    }
+    // Pause Time Button
+    const pauseBtn = document.getElementById('pause-time-btn');
+    pauseBtn.addEventListener('click', () => {
+        isTimePaused = !isTimePaused;
+        if (isTimePaused) {
+            pauseBtn.innerText = 'Retomar Tempo';
+            pauseBtn.classList.add('paused');
+        } else {
+            pauseBtn.innerText = 'Pausar Tempo';
+            pauseBtn.classList.remove('paused');
+        }
+    });
+
+    // Initial White Dwarf Setup (hidden)
+    const wdGeo = new THREE.SphereGeometry(2.1, 32, 32);
+    const wdMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    whiteDwarfMesh = new THREE.Mesh(wdGeo, wdMat);
+    whiteDwarfMesh.visible = false;
+    whiteDwarfMesh.userData = {
+        type: 'whiteDwarf',
+        name: solarSystemData.whiteDwarf ? solarSystemData.whiteDwarf.name : "Anã Branca",
+        radius: 2.1, // FIX: Required for camera calculation
+        info: solarSystemData.whiteDwarf ? solarSystemData.whiteDwarf.info : { desc: "Remanescente estelar." }
+    };
+    scene.add(whiteDwarfMesh);
 
     animate();
 }
+
 
 function addStarField() {
     const geometry = new THREE.BufferGeometry();
@@ -362,7 +389,9 @@ function createSystem() {
     });
     const sunMesh = new THREE.Mesh(sunGeo, sunMat);
     scene.add(sunMesh);
-    celestialBodies.push({ mesh: sunMesh, data: sunData, type: 'sun' });
+    // Adicionamos referências úteis para a explosão
+    const sunBody = { mesh: sunMesh, data: sunData, type: 'sun' };
+    celestialBodies.push(sunBody);
 
     solarSystemData.planets.forEach(data => createPlanet(data));
     solarSystemData.dwarfs.forEach(data => createPlanet(data));
@@ -601,10 +630,12 @@ function createPlanet(data) {
     }
 
     celestialBodies.push({
-        type: 'planet',
+        type: data.isDwarf ? 'dwarf' : 'planet',
         mesh: mesh,
         orbitGroup: orbitGroup,
         bodyGroup: bodyGroup,
+        orbitPath: orbitPath,
+        distance: data.distance,
         speed: data.speed,
         data: data,
         label: label,
@@ -634,30 +665,15 @@ function easeOutCubic(x) {
     return 1 - Math.pow(1 - x, 3);
 }
 
+
+// Reimplementando apenas o fechamento de info com botão direito, sem conflito de navegação
 document.addEventListener('mousedown', (e) => {
-    if (e.button === 2) {
-        isRightMouseDown = true;
-        controls.enabled = false;
-        if (focusedBody) closeInfo();
-    }
-});
-
-document.addEventListener('mouseup', (e) => {
-    if (e.button === 2) {
-        isRightMouseDown = false;
-        controls.enabled = true;
-    }
-});
-
-document.addEventListener('mousemove', (e) => {
-    if (isRightMouseDown) {
-        const movementX = e.movementX || e.mozMovementX || e.webkitMovementX || 0;
-        const movementY = e.movementY || e.mozMovementY || e.webkitMovementY || 0;
-        euler.setFromQuaternion(camera.quaternion);
-        euler.y -= movementX * 0.002;
-        euler.x -= movementY * 0.002;
-        euler.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, euler.x));
-        camera.quaternion.setFromEuler(euler);
+    if (e.button === 2) { // Right Click
+        if (focusedBody) {
+            // Se estiver focado, fechar info
+            closeInfo();
+        }
+        // Se não estiver focado, OrbitControls lida com o Pan nativamente
     }
 });
 
@@ -666,16 +682,20 @@ document.addEventListener('contextmenu', event => event.preventDefault());
 function animate() {
     requestAnimationFrame(animate);
 
+    const delta = clock.getDelta();
+
     // Date Update
     // timeScale is now typically Days per Second.
-    // At 60FPS: daysPerFrame = timeScale / 60.
-    const msPerDay = 24 * 60 * 60 * 1000;
-    const daysPerFrame = timeScale / 60;
-    currentDate.setTime(currentDate.getTime() + (daysPerFrame * msPerDay));
+    // Use delta (seconds) for framerate independence.
+    if (!isTimePaused) {
+        const msPerDay = 24 * 60 * 60 * 1000;
+        const daysToAdvance = timeScale * delta;
+        currentDate.setTime(currentDate.getTime() + (daysToAdvance * msPerDay));
+    }
 
     const day = String(currentDate.getDate()).padStart(2, '0');
     const month = String(currentDate.getMonth() + 1).padStart(2, '0');
-    const year = currentDate.getFullYear();
+    const year = currentYearAstronomical !== null ? currentYearAstronomical : currentDate.getFullYear();
     const hours = String(currentDate.getHours()).padStart(2, '0');
     const minutes = String(currentDate.getMinutes()).padStart(2, '0');
     const seconds = String(currentDate.getSeconds()).padStart(2, '0');
@@ -704,7 +724,8 @@ function animate() {
             }
             body.orbitGroup.rotation.y = angle;
             const rotDir = body.data.retrograde ? -1 : 1;
-            body.mesh.rotation.y += 0.01 * rotDir;
+            // Rotation Speed: 0.01 rad/frame at 60fps -> 0.6 rad/sec
+            body.mesh.rotation.y += (0.6 * delta) * rotDir;
         } else if (body.type === 'moon') {
             // Speed logic for moons needs to be compatible with timeScale (days/sec)
             // body.speed is rads per frame? Or arbitrary?
@@ -717,12 +738,18 @@ function animate() {
             // New: timeScale=1 (day/sec) => speed * ??
             // Let's use timeScale directly but clamped for sanity if it's too fast?
             // Or just trust the multiplier.
-            body.orbit.rotation.y += body.speed * timeScale * 0.05;
+            // Old Logic: body.speed * timeScale * 0.05
+            // Let's keep it visually similar. delta * 3.0 gives ~0.05 at 60FPS.
+            if (!isTimePaused) {
+                body.orbit.rotation.y += body.speed * timeScale * (delta * 3.0);
+            }
         }
     });
 
-    if (asteroidSystem) asteroidSystem.rotation.y += 0.0005 * timeScale;
-    if (kuiperSystem) kuiperSystem.rotation.y += 0.0002 * timeScale;
+    if (!isTimePaused) {
+        if (asteroidSystem) asteroidSystem.rotation.y += (0.03 * delta) * timeScale;
+        if (kuiperSystem) kuiperSystem.rotation.y += (0.012 * delta) * timeScale;
+    }
 
     if (focusedBody) {
         if (isFlying) {
@@ -750,17 +777,20 @@ function animate() {
             controls.target.lerpVectors(flightStartTarget, flightEndTarget, eased);
             controls.update();
         } else {
-            const targetPos = new THREE.Vector3();
-            focusedBody.mesh.getWorldPosition(targetPos);
-            const delta = new THREE.Vector3().subVectors(targetPos, controls.target);
-            camera.position.add(delta);
-            controls.target.copy(targetPos);
+            if (focusedBody && focusedBody.mesh) {
+                const targetPos = new THREE.Vector3();
+                focusedBody.mesh.getWorldPosition(targetPos);
+                const delta = new THREE.Vector3().subVectors(targetPos, controls.target);
+                camera.position.add(delta);
+                controls.target.copy(targetPos);
+            }
         }
     }
 
     const moveSpeed = 2 * (timeScale > 0 ? 1 : 1);
     const moveTotal = new THREE.Vector3();
-    const cameraSpeed = 5;
+    // 5 units per frame at 60fps -> 300 units per second
+    const cameraSpeed = 300 * delta;
 
     if (keyState['KeyW'] || keyState['ArrowUp']) {
         const forward = new THREE.Vector3();
@@ -804,8 +834,154 @@ function animate() {
         controls.update();
     }
 
+    // Explosão Solar
+    if (explosionActive) {
+        const sun = celestialBodies.find(b => b.type === 'sun');
+        if (sun) {
+            if (explosionPhase === 1) {
+                // Expansão
+                // 0.002 per frame at 60fps -> 0.12 per second
+                const expansionSpeed = 0.08 * delta; // Slightly slower for better control
+                sun.mesh.scale.addScalar(expansionSpeed);
+                // Mudança para cor mais quente/brilhante (Laranja intenso em vez de vermelho escuro)
+                sun.mesh.material.emissive.lerp(new THREE.Color(0xff4400), expansionSpeed);
+                sun.mesh.material.emissiveIntensity = THREE.MathUtils.lerp(sun.mesh.material.emissiveIntensity, 5, expansionSpeed);
+
+                // Luz menos vermelha para não saturar os gigantes gasosos
+                sunLight.color.lerp(new THREE.Color(0xffccaa), 0.3 * delta);
+                sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 1200, expansionSpeed);
+
+                // Camera Zoom-Out (Afastar suavemente enquanto o sol cresce)
+                const sunPos = sun.mesh.position;
+                const camDist = camera.position.distanceTo(sunPos);
+                if (camDist < 300) { // Limite de afastamento
+                    const retreatDir = new THREE.Vector3().subVectors(camera.position, sunPos).normalize();
+                    const moveVec = retreatDir.multiplyScalar(8 * delta);
+                    moveVec.y += 2.5 * delta; // Subir câmera para ângulo cinematográfico
+                    camera.position.add(moveVec);
+                    controls.target.lerp(sunPos, 2 * delta); // Manter foco no sol
+                }
+
+                // Update Info Panel Name dynamically if open
+                const infoName = document.getElementById('info-name');
+                if (infoName && infoName.innerText === 'Sol') {
+                    infoName.innerText = 'Gigante Vermelha';
+                    const infoDesc = document.getElementById('info-desc');
+                    if (infoDesc) {
+                        infoDesc.innerHTML = "O Sol esgotou seu hidrogênio e expandiu, engolindo os planetas internos. <br><br><strong>Status:</strong> Colapso Iminente.";
+                    }
+                }
+
+                // Consumo de planetas (BASEADO NO RAIO REAL DO SOL)
+                const sunRadius = sun.mesh.geometry.parameters.radius * sun.mesh.scale.x;
+                let earthConsumed = false;
+
+                celestialBodies.forEach(body => {
+                    if ((body.type === 'planet' || body.type === 'dwarf' || body.type === 'moon') && body.mesh.visible) {
+                        // For planets use group position (orbit radius)
+                        const dist = body.distance || 0;
+                        if (dist < sunRadius) {
+                            body.mesh.visible = false;
+                            if (body.orbitGroup) body.orbitGroup.visible = false;
+                            if (body.orbitPath) body.orbitPath.visible = false;
+                            if (body.label) body.label.element.style.display = 'none';
+
+                            if (body.data.name === 'Terra') earthConsumed = true;
+                        }
+                    } else if (body.data.name === 'Terra' && !body.mesh.visible) {
+                        // Check if Earth was ALREADY consumed in a previous frame
+                        earthConsumed = true;
+                    }
+                });
+
+                // Transição para Anã Branca (Sincronizada com a Terra)
+                if (earthConsumed) {
+                    explosionPhase = 3;
+                    sun.mesh.material.transparent = true;
+                    sun.mesh.material.needsUpdate = true;
+                    highlightBody(sun, false); // Remove hover effects immediately
+                    whiteDwarfMesh.visible = true;
+                    sunLight.color.setHex(0xffffff);
+                    sunLight.intensity = 100;
+                }
+            } else if (explosionPhase === 3) {
+                // Fade out
+                // Não crescer mais, apenas desaparecer
+                sun.mesh.material.opacity -= 0.5 * delta; // Mais rápido
+                if (sun.mesh.material.opacity <= 0) {
+                    sun.mesh.visible = false;
+                }
+            }
+        }
+    }
+
     composer.render();
     labelRenderer.render(scene, camera);
+}
+
+function startExplosion() {
+    explosionActive = true;
+    explosionPhase = 1;
+    // Salto temporal para 5 bilhões de anos no futuro
+    // O objeto Date do JS não suporta 5 bilhões, então usamos nossa variável customizada
+    currentYearAstronomical = 5000000000;
+}
+
+function resetSolarSystem() {
+    explosionActive = false;
+    explosionPhase = 0;
+    currentYearAstronomical = null;
+    currentDate = new Date(); // Volta para hoje
+
+    const sun = celestialBodies.find(b => b.type === 'sun');
+    if (sun) {
+        sun.mesh.scale.set(1, 1, 1);
+        sun.mesh.visible = true;
+        sun.mesh.material.emissive.setHex(0xffaa00);
+        sun.mesh.material.emissiveIntensity = 2;
+        sun.mesh.material.transparent = false;
+        sun.mesh.material.opacity = 1;
+        sun.mesh.material.needsUpdate = true;
+    }
+
+    whiteDwarfMesh.visible = false;
+    sunLight.color.setHex(0xffffff);
+    sunLight.intensity = 500;
+
+    celestialBodies.forEach(body => {
+        if (body.type === 'planet' || body.type === 'dwarf' || body.type === 'moon') {
+            body.mesh.visible = true;
+            if (body.orbitGroup) body.orbitGroup.visible = true;
+            if (body.orbitPath) body.orbitPath.visible = true;
+            if (body.label) body.label.element.style.display = 'block';
+
+            // Restore rings
+            body.mesh.children.forEach(child => {
+                if (child.name === 'rings') child.visible = true;
+            });
+        }
+    });
+
+    if (asteroidSystem) asteroidSystem.visible = true;
+    if (kuiperSystem) kuiperSystem.visible = true;
+
+    closeInfo(); // Close info panel
+
+    // Adjust Camera if too close (User Request: "Sol na cara")
+    const sunPos = sun ? sun.mesh.position : new THREE.Vector3(0, 0, 0);
+    const dist = camera.position.distanceTo(sunPos);
+    if (dist < 80) {
+        // Move camera back to a comfortable distance
+        const direction = new THREE.Vector3().subVectors(camera.position, sunPos).normalize();
+        // If camera is exactly at 0,0,0 (unlikely but possible), use a default direction
+        if (direction.lengthSq() === 0) direction.set(0, 0, 1);
+
+        const newPos = sunPos.clone().add(direction.multiplyScalar(150));
+        // Animate or set directly? Setting directly for instant reset feel is usually better for "Reset" actions
+        camera.position.copy(newPos);
+        controls.target.copy(sunPos);
+        controls.update();
+    }
 }
 
 function updateHoverInfo(body) {
@@ -816,8 +992,46 @@ function onMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
-    const meshes = celestialBodies.map(b => b.mesh).filter(m => m);
+    const meshes = celestialBodies.map(b => b.mesh).filter(m => {
+        if (!m) return false;
+        // Durante fase 3 (Anã Branca), o Sol antigo não deve bloquear o raycaster
+        if (explosionPhase === 3 && m === celestialBodies.find(b => b.type === 'sun').mesh) return false;
+        return true;
+    });
     const intersects = raycaster.intersectObjects(meshes);
+
+    // Bloqueio de UI: Se estiver sobre o painel, não processar hover
+    const infoPanel = document.getElementById('info-panel');
+    if (infoPanel && !infoPanel.classList.contains('hidden')) {
+        const rect = infoPanel.getBoundingClientRect();
+        if (event.clientX >= rect.left && event.clientX <= rect.right &&
+            event.clientY >= rect.top && event.clientY <= rect.bottom) {
+            document.body.style.cursor = 'default';
+            if (hoveredBody) {
+                highlightBody(hoveredBody, false);
+                hoveredBody = null;
+            }
+            return;
+        }
+    }
+
+    // Check White Dwarf Hover explicitly (since it might not be in the celestialBodies list or filtered out intentionally)
+    let whiteDwarfHovered = false;
+    if (whiteDwarfMesh && whiteDwarfMesh.visible) {
+        const wdIntersects = raycaster.intersectObject(whiteDwarfMesh);
+        if (wdIntersects.length > 0) {
+            whiteDwarfHovered = true;
+            document.body.style.cursor = 'pointer';
+            // Fix: Create wrapper compatible with celestialBodies structure
+            const wdWrapper = { mesh: whiteDwarfMesh, data: whiteDwarfMesh.userData, type: 'whiteDwarf' };
+
+            if (!hoveredBody || hoveredBody.mesh !== whiteDwarfMesh) {
+                hoveredBody = wdWrapper;
+                audioManager.playHover();
+            }
+            return; // Exit early to prioritize WD
+        }
+    }
 
     if (intersects.length > 0) {
         const hitObj = intersects[0].object;
@@ -868,8 +1082,13 @@ function highlightBody(body, active) {
             infoDiv.innerHTML = '';
             if (body.data.name !== 'Terra') {
                 if (body.mesh.material.emissive) {
-                    body.mesh.material.emissiveIntensity = 0;
-                    body.mesh.material.emissive.setHex(0x000000);
+                    // SE for o Sol e a explosão estiver ativa, NÃO resetar o emissive
+                    if (body.type === 'sun' && explosionActive) {
+                        // Maintain intensity (handled by animate loop)
+                    } else {
+                        body.mesh.material.emissiveIntensity = 0;
+                        body.mesh.material.emissive.setHex(0x000000);
+                    }
                 }
             } else {
                 body.mesh.material.emissiveIntensity = 1;
@@ -881,11 +1100,40 @@ function highlightBody(body, active) {
 
 function onMouseClick(event) {
     if (hoveredBody) {
+        // Validation before accessing properties
+        if (!hoveredBody.data || !hoveredBody.mesh) return;
+
+        // Bloquear informativos de planetas destruídos
+        if (!hoveredBody.mesh.visible) {
+            return;
+        }
+        // Bloqueio de Luas genéricas
+        if (hoveredBody.type === 'moon' && hoveredBody.data.name !== 'Lua') {
+            return;
+        }
         focusOnPlanet(hoveredBody);
+    } else {
+        // Checar clique na Anã Branca via Raycaster (hoveredBody já lida com isso se estiver na lista, mas a WD é especial)
+        const mouse = new THREE.Vector2(
+            (event.clientX / window.innerWidth) * 2 - 1,
+            -(event.clientY / window.innerHeight) * 2 + 1
+        );
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouse, camera);
+        const intersects = raycaster.intersectObject(whiteDwarfMesh);
+        if (intersects.length > 0 && whiteDwarfMesh.visible) {
+            focusOnPlanet({
+                mesh: whiteDwarfMesh,
+                data: whiteDwarfMesh.userData,
+                type: 'whiteDwarf',
+                // Ensure orbitGroup/Path are ignored or handled safely if accessing them elsewhere
+            });
+        }
     }
 }
 
 function focusOnPlanet(body) {
+    if (!body || !body.data) return; // Safety check for destroyed/invalid bodies
     if (focusedBody && focusedBody.data.name === 'Lua' && isCheeseMode && focusedBody !== body) {
         toggleMoonCheese(false);
     }
@@ -902,6 +1150,30 @@ function focusOnPlanet(body) {
 
     const descEl = document.getElementById('info-desc');
     descEl.innerHTML = data.info.desc || '...';
+
+    // Modificar nome do Sol durante explosão
+    if (data.name === 'Sol' && explosionActive && explosionPhase >= 1 && explosionPhase < 3) {
+        document.getElementById('info-name').innerText = 'Gigante Vermelha';
+    }
+
+    // Injetar botão de explosão se for o Sol ou Anã Branca
+    if (data.name === 'Sol' || data.name.includes('Anã Branca')) {
+        const triggerBtn = document.createElement('button');
+        triggerBtn.id = 'trigger-explosion';
+        triggerBtn.className = 'secret-trigger-btn';
+        triggerBtn.innerText = explosionActive ? 'RESETAR SISTEMA' : 'DISPARAR EXPLOSÃO';
+        triggerBtn.onclick = (e) => {
+            e.stopPropagation();
+            if (explosionActive) {
+                resetSolarSystem();
+                triggerBtn.innerText = 'DISPARAR EXPLOSÃO';
+            } else {
+                startExplosion();
+                triggerBtn.innerText = 'RESETAR SISTEMA';
+            }
+        };
+        descEl.appendChild(triggerBtn);
+    }
 
     const egg = descEl.querySelector('.secret-interaction');
     if (egg) {
@@ -949,12 +1221,17 @@ function focusOnPlanet(body) {
     flightStartTarget.copy(controls.target);
     flightEndTarget.copy(targetPos);
 
-    if (body.type === 'sun') {
+    if (body.type === 'sun' || body.type === 'whiteDwarf') {
         flightNextPos.copy(zoomPos);
+        // Ensure we don't end up inside the mesh or at 0,0,0
+        if (flightNextPos.length() < data.radius * 2) {
+            flightNextPos.normalize().multiplyScalar(data.radius * 3);
+        }
     } else {
         flightNextPos.copy(dayPos);
     }
-    controls.minDistance = data.radius * 1.1;
+    controls.minDistance = data.radius * 1.001; // Permite chegar MUITO perto (0.1% de altitude)
+    controls.enablePan = false; // Desabilita Pan para evitar conflito com target fixo no planeta
 }
 
 let moonOriginalTexture = null;
@@ -1068,7 +1345,8 @@ function closeInfo() {
     }
     focusedBody = null;
     document.getElementById('info-panel').classList.add('hidden');
-    controls.minDistance = 0.5;
+    controls.minDistance = 0.1;
+    controls.enablePan = true; // Reabilita Pan livre
 }
 
 function onWindowResize() {

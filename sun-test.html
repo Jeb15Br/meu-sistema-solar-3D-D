@@ -4,8 +4,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Solar System</title>
+    <title>3D Solar System - SUN EXPLOSION TEST</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        #explosion-ui {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #00ccff;
+            padding: 20px;
+            border: 1px solid #00ccff;
+            border-radius: 10px;
+            font-family: 'Exo 2', sans-serif;
+            z-index: 2000;
+        }
+
+        #explosion-ui h1 {
+            margin: 0 0 10px 0;
+            font-size: 1.2em;
+            color: #ff3300;
+        }
+
+        #explosion-ui button {
+            background: #ff3300;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+    </style>
     <script type="importmap">
         {
             "imports": {
@@ -14,11 +47,16 @@
             }
         }
     </script>
-    <!-- RPOD: Red Panel of Death (Global Error Handler) -->
-    <script src="rpod.js"></script>
 </head>
 
 <body>
+    <div id="explosion-ui">
+        <h1>Simulação: Ano 5 Bi</h1>
+        <div id="status-text">Estado: Estável</div>
+        <div id="year-countdown">Anos restantes: 5.000.000.000</div>
+        <button id="trigger-explosion">DISPARAR EXPLOSÃO</button>
+    </div>
+
     <div id="ui-container">
         <div class="controls-row">
             <div class="slider-group">
@@ -31,18 +69,10 @@
             </div>
             <div class="date-group">
                 <div id="date-display">...</div>
-                <div class="time-controls-row">
-                    <button id="pause-time-btn">Pausar Tempo</button>
-                    <button id="reset-date-btn" style="display: none;">Hoje</button>
-                </div>
             </div>
         </div>
     </div>
 
-    <!-- Start Overlay - REMOVED -->
-    <!-- <div id="start-overlay"></div> -->
-
-    <!-- Info Panel -->
     <div id="info-panel" class="hidden">
         <button id="close-info">X</button>
         <h2 id="info-name">Planeta</h2>
@@ -54,17 +84,11 @@
         <p id="info-desc">Descrição...</p>
     </div>
 
-    <!-- Audio -->
     <audio id="bg-music" loop>
-        <!-- Coloque seu arquivo 'music.mp3' na pasta 'assets' -->
-        <source src="assets/music.mp3" type="audio/mp3">
-        <!-- Fallback para teste se não houver arquivo local -->
         <source src="https://assets.mixkit.co/music/preview/mixkit-stars-in-space-605.mp3" type="audio/mp3">
-        Your browser does not support the audio element.
     </audio>
-    <button id="audio-btn">🔈 Música</button>
 
-    <script type="module" src="main.js?v=63"></script>
+    <script type="module" src="sun-explosion-test.js"></script>
 </body>
 
 </html>

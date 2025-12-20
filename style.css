@@ -217,7 +217,8 @@ input[type=range] {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    pointer-events: none; /* Garantir que cliques passem pro Canvas */
+    pointer-events: none;
+    /* Garantir que cliques passem pro Canvas */
     /* Aligns line and text */
 }
 
@@ -238,4 +239,57 @@ input[type=range] {
        Usually the CSS object is at the planet center. 
        So we offset the text up/right and draw a line back.
     */
+}
+
+.time-controls-row {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+#pause-time-btn {
+    padding: 8px 15px;
+    background: rgba(0, 70, 140, 0.8);
+    color: white;
+    border: 1px solid #00ccff;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'Exo 2', sans-serif;
+    transition: all 0.3s ease;
+}
+
+#pause-time-btn:hover {
+    background: #00ccff;
+    color: #001428;
+    box-shadow: 0 0 10px #00ccff;
+}
+
+#pause-time-btn.paused {
+    background: #ffaa00;
+    border-color: #ffaa00;
+    color: #201000;
+}
+
+.secret-trigger-btn {
+    display: block;
+    width: 100%;
+    margin-top: 15px;
+    padding: 10px;
+    background: linear-gradient(45deg, #ff3300, #ff8800);
+    border: none;
+    color: white;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 51, 0, 0.4);
+    transition: all 0.2s;
+}
+
+.secret-trigger-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(255, 51, 0, 0.6);
+}
+
+.secret-trigger-btn:active {
+    transform: scale(0.98);
 }

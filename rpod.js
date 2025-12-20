@@ -32,6 +32,8 @@ window.RPOD = {
         console.log("🔥 RPOD (Red Panel of Death) Initialized");
     },
 
+    activeErrors: {},
+
     showRPOD: function (msg, source, lineno, colno, error) {
         // Play Error Sound
         if (audioError) {
@@ -50,17 +52,16 @@ window.RPOD = {
                 left: '0',
                 width: '100vw',
                 height: '100vh',
-                backgroundColor: 'rgba(20, 0, 0, 0.95)', // Slightly transparent background
+                backgroundColor: 'rgba(20, 0, 0, 0.95)',
                 zIndex: '999999',
                 display: 'flex',
                 flexDirection: 'column',
                 padding: '20px',
                 boxSizing: 'border-box',
                 fontFamily: 'monospace',
-                overflowY: 'auto' // Allow scrolling for multiple errors
+                overflowY: 'auto'
             });
 
-            // Header with Global Actions
             container.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; border-bottom: 2px solid #ff4444; padding-bottom:10px;">
                     <h2 style="color:#ff4444; margin:0; display:flex; align-items:center;">
@@ -75,7 +76,7 @@ window.RPOD = {
                             style="padding:10px 20px; background:#fff; color:#aa0000; border:none; border-radius:6px; cursor:pointer; font-weight:bold;">
                             🔄 RECARREGAR
                         </button>
-                        <button onclick="document.getElementById('rpod-main-container').remove(); window.rpodErrors = [];" 
+                        <button onclick="document.getElementById('rpod-main-container').remove(); window.RPOD.activeErrors = {}; window.rpodErrors = [];" 
                             style="padding:10px 20px; background:#440000; color:white; border:1px solid #ff4444; border-radius:6px; cursor:pointer; font-weight:bold;">
                             ❌ FECHAR TUDO
                         </button>
@@ -83,9 +84,8 @@ window.RPOD = {
                 </div>
                 <div id="rpod-cards-area" style="display:flex; flex-direction:column; gap:20px;"></div>
             `;
-            document.body.appendChild(container); // Append to body
+            document.body.appendChild(container);
 
-            // Setup Copy All Logic
             document.getElementById('btn-copy-all').onclick = () => {
                 const allErrors = (window.rpodErrors || []).join('\n\n========================================\n\n');
                 navigator.clipboard.writeText(allErrors).then(() => {
@@ -97,54 +97,75 @@ window.RPOD = {
             };
         }
 
-        // --- Create Individual Error Card ---
-        let stack = error && error.stack ? error.stack : `at ${source}:${lineno}:${colno}`;
-        let timestamp = new Date().toLocaleTimeString();
-        let fullErrorText = `[${timestamp}] ERRO: ${msg}\nSTACK: ${stack}`;
+        const stack = error && error.stack ? error.stack : `at ${source}:${lineno}:${colno}`;
+        const errorKey = msg + stack;
+        const timestamp = new Date().toLocaleTimeString();
 
-        // Store error for "Copy All"
-        if (!window.rpodErrors) window.rpodErrors = [];
-        window.rpodErrors.push(fullErrorText);
+        // Check if error already exists
+        if (window.RPOD.activeErrors[errorKey]) {
+            window.RPOD.activeErrors[errorKey].count++;
+            const card = window.RPOD.activeErrors[errorKey].element;
+            const titleEl = card.querySelector('.rpod-msg-title');
+            titleEl.innerText = `${msg} (${window.RPOD.activeErrors[errorKey].count}x)`;
 
-        // Update Count
-        document.getElementById('rpod-error-count').innerText = window.rpodErrors.length;
+            // Update timestamp to latest
+            card.querySelector('.rpod-timestamp').innerText = timestamp;
 
-        const card = document.createElement('div');
-        Object.assign(card.style, {
-            backgroundColor: 'rgba(80, 0, 0, 1)',
-            border: '1px solid #ff4444',
-            borderRadius: '8px',
-            padding: '20px',
-            color: 'white',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
-            position: 'relative'
-        });
+            // Highlight briefly
+            card.style.borderColor = '#ffffff';
+            setTimeout(() => card.style.borderColor = '#ff4444', 300);
+        } else {
+            // New error
+            const fullErrorText = `[${timestamp}] ERRO: ${msg}\nSTACK: ${stack}`;
+            if (!window.rpodErrors) window.rpodErrors = [];
+            window.rpodErrors.push(fullErrorText);
 
-        card.innerHTML = `
-            <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                <strong style="color:#ffdddd; font-size:1.1em;">${msg}</strong>
-                <span style="color:#aaa; font-size:0.9em;">${timestamp}</span>
-            </div>
-            <pre style="background:rgba(0,0,0,0.3); padding:10px; overflow-x:auto; margin:0; font-size:0.85em; color:#ddd; border: 1px solid #400;">${stack}</pre>
-            <div style="text-align:right; margin-top:10px;">
-                 <button class="btn-copy-single" 
-                    style="padding:5px 10px; background:#333; color:#ccc; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:0.8em;">
-                    📋 Copiar
-                </button>
-            </div>
-        `;
-
-        // Bind Single Copy Button
-        card.querySelector('.btn-copy-single').onclick = function () {
-            navigator.clipboard.writeText(fullErrorText).then(() => {
-                this.innerText = "✅";
-                setTimeout(() => this.innerText = "📋 Copiar", 1500);
+            const card = document.createElement('div');
+            Object.assign(card.style, {
+                backgroundColor: 'rgba(80, 0, 0, 1)',
+                border: '1px solid #ff4444',
+                borderRadius: '8px',
+                padding: '20px',
+                color: 'white',
+                boxShadow: '0 4px 15px rgba(0,0,0,0.5)',
+                position: 'relative',
+                transition: 'border-color 0.3s'
             });
-        };
 
-        document.getElementById('rpod-cards-area').appendChild(card);
+            card.innerHTML = `
+                <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                    <strong class="rpod-msg-title" style="color:#ffdddd; font-size:1.1em;">${msg} (1x)</strong>
+                    <span class="rpod-timestamp" style="color:#aaa; font-size:0.9em;">${timestamp}</span>
+                </div>
+                <pre style="background:rgba(0,0,0,0.3); padding:10px; overflow-x:auto; margin:0; font-size:0.85em; color:#ddd; border: 1px solid #400;">${stack}</pre>
+                <div style="text-align:right; margin-top:10px;">
+                     <button class="btn-copy-single" 
+                        style="padding:5px 10px; background:#333; color:#ccc; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:0.8em;">
+                        📋 Copiar
+                    </button>
+                </div>
+            `;
 
-        // Auto -scroll to latest
+            card.querySelector('.btn-copy-single').onclick = function () {
+                const count = window.RPOD.activeErrors[errorKey] ? window.RPOD.activeErrors[errorKey].count : 1;
+                const textToCopy = `[${timestamp}] ERRO: ${msg} (${count}x)\nSTACK: ${stack}`;
+                navigator.clipboard.writeText(textToCopy).then(() => {
+                    this.innerText = "✅";
+                    setTimeout(() => this.innerText = "📋 Copiar", 1500);
+                });
+            };
+
+            document.getElementById('rpod-cards-area').appendChild(card);
+            window.RPOD.activeErrors[errorKey] = {
+                count: 1,
+                element: card
+            };
+        }
+
+        // Update Total Count (distinct errors)
+        document.getElementById('rpod-error-count').innerText = Object.keys(window.RPOD.activeErrors).length;
+
+        // Auto-scroll to latest
         container.scrollTop = container.scrollHeight;
 
         console.error("RPOD Triggered:", msg, error);

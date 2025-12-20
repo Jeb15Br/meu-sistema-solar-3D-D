@@ -136,5 +136,15 @@ export const solarSystemData = {
             info: { age: "4.5 Bi Anos", type: "Planeta Anão", desc: "Rebaixado à Série B dos planetas, mas jamais esquecido, <span class='secret-interaction'>brutal, não sobrou nada pro beta</span>. Coração gelado.", translation: "248 anos", rotation: "6 dias", moons: "5" },
             textureMap: 'assets/pluto.jpg'
         }
-    ]
+    ],
+    whiteDwarf: {
+        name: "Anã Branca",
+        info: {
+            age: "5+ Bi Anos",
+            type: "Remanescente Estelar",
+            desc: "O núcleo denso que restou após o Sol esgotar seu combustível e expelir suas camadas externas. É extremamente quente e densa.",
+            rotation: "Horas/Dias",
+            moons: "0"
+        }
+    }
 };
