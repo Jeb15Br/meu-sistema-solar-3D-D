@@ -4,7 +4,7 @@ import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { solarSystemData } from './planet-data.js?v=20';
+import { solarSystemData } from './planet-data.js?v=32';
 import { textureGenerator } from './texture-generator.js';
 
 // --- AUDIO MANAGER ---
@@ -13,10 +13,10 @@ const audioManager = {
     currentIndex: 0,
     element: document.getElementById('bg-music'),
     btn: document.getElementById('audio-btn'),
-    hoverSound: new Audio('assets/sound_effects/click.mp3'),
+    hoverSound: null, // Initialize as null, will be created on first play
     init: function () {
-        this.hoverSound.volume = 1.0;
-        this.hoverSound.load();
+        // this.hoverSound.volume = 1.0; // Removed, volume set in playHover
+        // this.hoverSound.load(); // Removed, loaded on first play
         this.discoverTracks();
         this.initSpecialAssets();
 
@@ -34,9 +34,12 @@ const audioManager = {
     discoveryQueue: [],
 
     playHover: function () {
-        const s = this.hoverSound.cloneNode();
-        s.volume = 1.0;
-        s.play().catch(() => { });
+        if (!this.hoverSound) {
+            this.hoverSound = new Audio('assets/sound_effects/click.mp3');
+            this.hoverSound.volume = 1.0; // Volume máximo
+        }
+        this.hoverSound.currentTime = 0;
+        this.hoverSound.play().catch(() => { });
     },
     playSecretAction: function (category = 'pluto') {
         if (category === 'moon') {
@@ -127,6 +130,78 @@ const audioManager = {
 };
 audioManager.init();
 
+// --- BROWSER NOTIFICATION ---
+function showChromeWarning() {
+    const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+    if (isChrome) {
+        // Only show if not already showing
+        if (document.querySelector('.chrome-warning-toast')) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'chrome-warning-toast';
+        toast.style.position = 'fixed';
+        toast.style.top = '20px';
+        toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)';
+        toast.style.background = 'rgba(255, 50, 50, 0.9)';
+        toast.style.color = 'white';
+        toast.style.padding = '15px 25px';
+        toast.style.borderRadius = '10px';
+        toast.style.border = '2px solid white';
+        toast.style.fontFamily = 'Exo 2, sans-serif';
+        toast.style.fontWeight = 'bold';
+        toast.style.zIndex = '11000'; // Above FPS
+        toast.style.textAlign = 'center';
+        toast.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+        toast.innerHTML = '⚠️ Desempenho Baixo: Recomendamos o uso do <strong>Microsoft Edge</strong> <br> se os travamentos persistirem no Chrome.';
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.transition = 'opacity 1s, transform 1s';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(-20px)';
+            setTimeout(() => toast.remove(), 1000);
+        }, 10000);
+    }
+}
+
+function showControlsToast() {
+    if (localStorage.getItem('solar_system_tutorial_shown')) return;
+
+    const toast = document.createElement('div');
+    toast.className = 'controls-tutorial-toast';
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.background = 'rgba(0, 150, 255, 0.9)';
+    toast.style.color = 'white';
+    toast.style.padding = '15px 25px';
+    toast.style.borderRadius = '10px';
+    toast.style.border = '2px solid white';
+    toast.style.fontFamily = 'Exo 2, sans-serif';
+    toast.style.fontWeight = 'bold';
+    toast.style.zIndex = '11000';
+    toast.style.textAlign = 'center';
+    toast.style.boxShadow = '0 0 20px rgba(0,0,0,0.5)';
+    toast.style.lineHeight = '1.5';
+    toast.innerHTML = '🚀 <strong>Bem-vindo ao Sistema Solar!</strong><br>' +
+        'Mova a câmera: <strong>WASD</strong> ou <strong>Setas</strong><br>' +
+        'Orbitar: Segure o <strong>Botão Esquerdo</strong> e arraste<br>' +
+        'Zoom: Use o <strong>Scroll</strong> do mouse';
+    document.body.appendChild(toast);
+
+    localStorage.setItem('solar_system_tutorial_shown', 'true');
+
+    setTimeout(() => {
+        toast.style.transition = 'opacity 1s, transform 1s';
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(-50%) translateY(20px)';
+        setTimeout(() => toast.remove(), 1000);
+    }, 15000);
+}
+// REMOVED: showChromeWarning() call from global init to make it dynamic based on performance
+
 // Global State
 let scene, camera, renderer, labelRenderer, controls, composer;
 let celestialBodies = [];
@@ -155,6 +230,7 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let hoveredBody = null;
 let hoverTimer = null;
+let hasShownWarning = false;
 const keyState = {};
 
 window.solarSystem = {
@@ -174,7 +250,7 @@ function init() {
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 10000);
     camera.position.set(0, 100, 250);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
+    renderer = new THREE.WebGLRenderer({ antialias: false }); // Desativado antialias nativo e logarithmicDepthBuffer para ganho de performance
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -204,11 +280,11 @@ function init() {
     sunLight = new THREE.PointLight(0xffffff, 400, 1500);
     sunLight.decay = 1.5;
     sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 4096;
-    sunLight.shadow.mapSize.height = 4096;
+    sunLight.shadow.mapSize.width = 2048; // Reduzido de 4096
+    sunLight.shadow.mapSize.height = 2048;
     sunLight.shadow.camera.near = 1;
     sunLight.shadow.camera.far = 1500;
-    sunLight.shadow.bias = -0.0001;
+    sunLight.shadow.bias = -0.0005; // Ajustado bias para nova resolução
     scene.add(sunLight);
 
     const renderScene = new RenderPass(scene, camera);
@@ -285,10 +361,9 @@ function init() {
         updateTimeScale(val);
     });
 
-    // Real Time / Reset Button
+    // Real Time Speed Button (Only fixes speed)
     document.getElementById('real-time-btn').addEventListener('click', () => {
         isRealTime = true;
-        currentDate = new Date(); // Reset to NOW
 
         // Reset Slider
         const slider = document.getElementById('timeSlider');
@@ -299,6 +374,16 @@ function init() {
 
         document.getElementById('time-display').innerText = `Velocidade: Tempo Real`;
         document.getElementById('real-time-btn').classList.add('active');
+    });
+
+    // Reset Date Button (Today - resets date/time to now)
+    document.getElementById('reset-date-btn').addEventListener('click', () => {
+        currentDate = new Date(); // Reset to local machine time
+        currentYearAstronomical = null;
+
+        // Se estiver em modo explosão/anã branca, talvez o usuário queira resetar tudo?
+        // Mas por enquanto vamos só resetar a data conforme o pedido.
+        console.log("Date reset to Today:", currentDate);
     });
 
     document.getElementById('close-info').addEventListener('click', closeInfo);
@@ -328,9 +413,10 @@ function init() {
         radius: 2.1, // FIX: Required for camera calculation
         info: solarSystemData.whiteDwarf ? solarSystemData.whiteDwarf.info : { desc: "Remanescente estelar." }
     };
+    whiteDwarfMesh.body = { mesh: whiteDwarfMesh, data: whiteDwarfMesh.userData, type: 'whiteDwarf' };
     scene.add(whiteDwarfMesh);
-
     animate();
+    showControlsToast();
 }
 
 
@@ -379,7 +465,7 @@ function createBeltParticleSystem(count, minR, maxR) {
 
 function createSystem() {
     const sunData = solarSystemData.sun;
-    const sunGeo = new THREE.SphereGeometry(sunData.radius, 64, 64);
+    const sunGeo = new THREE.SphereGeometry(sunData.radius, 48, 48); // Reduzido de 64
     const sunTex = textureGenerator.createSunTexture();
     const sunMat = new THREE.MeshStandardMaterial({
         map: sunTex,
@@ -408,7 +494,7 @@ function createPlanet(data) {
     bodyGroup.position.x = data.distance;
     orbitGroup.add(bodyGroup);
 
-    const geometry = new THREE.SphereGeometry(data.radius, 64, 64);
+    const geometry = new THREE.SphereGeometry(data.radius, data.radius > 5 ? 48 : 32, data.radius > 5 ? 48 : 32); // Dinâmico baseado no tamanho
     let texture;
     const loader = new THREE.TextureLoader();
     let material;
@@ -419,8 +505,8 @@ function createPlanet(data) {
             const nightTex = loader.load(data.nightMap);
             material = new THREE.MeshStandardMaterial({
                 map: texture,
-                emissiveMap: nightTex,
                 emissive: 0xffffff,
+                emissiveMap: nightTex,
                 emissiveIntensity: 1
             });
 
@@ -473,6 +559,19 @@ function createPlanet(data) {
         });
     }
 
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    bodyGroup.add(mesh);
+
+    // IMPLEMENTATION: Axial Tilt (Inclinação da Terra e outros)
+    if (data.tilt) {
+        const tiltRad = THREE.MathUtils.degToRad(data.tilt);
+        mesh.rotation.z = tiltRad; // Apply tilt to z-axis relative to ecliptic normal (y)
+
+
+    }
+
     if (data.name === 'Terra' || data.name === 'Vênus') {
         const atmoGeo = new THREE.SphereGeometry(data.radius * 1.05, 32, 32);
         const atmoMat = new THREE.ShaderMaterial({
@@ -517,14 +616,10 @@ function createPlanet(data) {
         bodyGroup.add(atmo);
     }
 
-    if (data.tilt) {
-        bodyGroup.rotation.z = THREE.MathUtils.degToRad(data.tilt);
-    }
-
     if (data.hasRings) {
         const startRad = data.radius * 1.2;
         const endRad = data.radius * 2.3;
-        const ringGeo = new THREE.RingGeometry(startRad, endRad, 64);
+        const ringGeo = new THREE.RingGeometry(startRad, endRad, 48); // Reduzido de 64
         var pos = ringGeo.attributes.position;
         var v3 = new THREE.Vector3();
         for (let i = 0; i < pos.count; i++) {
@@ -557,27 +652,33 @@ function createPlanet(data) {
             });
         }
         const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.order = 'ZXY'; // Permite aplicar inclinação (Z) e depois deitá-lo (X) de forma independente
         ring.rotation.x = Math.PI / 2;
-        bodyGroup.add(ring);
+        if (data.tilt) {
+            ring.rotation.z = THREE.MathUtils.degToRad(data.tilt);
+        }
+        ring.name = 'rings';
+        bodyGroup.add(ring); // Adicionado ao bodyGroup para não herdar a rotação do mesh (Pedido do Usuário)
     }
 
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
-    bodyGroup.add(mesh);
-
-    const orbitPathGeo = new THREE.RingGeometry(data.distance - 0.1, data.distance + 0.1, 128);
+    const orbitPathGeo = new THREE.RingGeometry(data.distance - 0.1, data.distance + 0.1, 96); // Reduzido de 128
     const orbitPathMat = new THREE.MeshBasicMaterial({ color: 0x444444, side: THREE.DoubleSide });
     const orbitPath = new THREE.Mesh(orbitPathGeo, orbitPathMat);
     orbitPath.rotation.x = Math.PI / 2;
     scene.add(orbitPath);
 
+    const labelText = document.createElement('div');
+    labelText.className = 'label-text';
+    labelText.innerText = data.name;
+
+    // FORÇANDO COR E SOMBRA NOS RÓTULOS (Imagem 2)
+    const labelColor = data.color ? '#' + new THREE.Color(data.color).getHexString() : '#ffffff';
+    labelText.style.color = labelColor;
+    labelText.style.textShadow = `0 0 8px ${labelColor}`;
+
     const labelDiv = document.createElement('div');
     labelDiv.className = 'label-container';
-    const text = document.createElement('div');
-    text.className = 'label-text';
-    text.textContent = data.name;
-    labelDiv.appendChild(text);
+    labelDiv.appendChild(labelText);
     const infoDiv = document.createElement('div');
     infoDiv.className = 'hover-info';
     labelDiv.appendChild(infoDiv);
@@ -623,7 +724,10 @@ function createPlanet(data) {
                 type: 'moon',
                 mesh: moonMesh,
                 orbit: moonOrbit,
+                distance: moonData.distance,
                 speed: moonData.speed,
+                originalDistance: moonData.distance,
+                originalSpeed: moonData.speed,
                 data: moonData
             });
         });
@@ -637,6 +741,8 @@ function createPlanet(data) {
         orbitPath: orbitPath,
         distance: data.distance,
         speed: data.speed,
+        originalDistance: data.distance,
+        originalSpeed: data.speed,
         data: data,
         label: label,
         infoDiv: infoDiv
@@ -647,15 +753,95 @@ let isRightMouseDown = false;
 let flySpeed = 2.0;
 const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 
-let isFlying = false;
-let flightPhase = 1;
-let flightStartTime = 0;
-let flightDuration = 1500;
-const flightStartPos = new THREE.Vector3();
-const flightEndPos = new THREE.Vector3();
-const flightStartTarget = new THREE.Vector3();
-const flightEndTarget = new THREE.Vector3();
-const flightNextPos = new THREE.Vector3();
+let isFlying = false, flightPhase = 0, flightStartTime = 0, flightDuration = 0;
+let flightStartPos = new THREE.Vector3(), flightEndPos = new THREE.Vector3();
+let flightStartTarget = new THREE.Vector3(), flightEndTarget = new THREE.Vector3();
+let flightNextPos = new THREE.Vector3();
+
+// --- PERFORMANCE MONITORING ---
+let lastTime = performance.now();
+let frames = 0;
+let fps = 0;
+let fpsLowCounter = 0;
+let isFpsVisible = false;
+
+function updateFPS() {
+    const now = performance.now();
+    frames++;
+    if (now > lastTime + 1000) {
+        fps = Math.round((frames * 1000) / (now - lastTime));
+        frames = 0;
+        lastTime = now;
+
+        const isChrome = /Chrome/.test(navigator.userAgent) && /Google Inc/.test(navigator.vendor);
+        if (isChrome) {
+            if (fps < 45) {
+                fpsLowCounter++;
+            } else {
+                fpsLowCounter = Math.max(0, fpsLowCounter - 1);
+            }
+
+            if (fpsLowCounter >= 3 && !isFpsVisible) {
+                isFpsVisible = true;
+                showFpsDisplay();
+                if (!hasShownWarning) {
+                    showChromeWarning();
+                    hasShownWarning = true;
+                }
+            } else if (fpsLowCounter === 0 && isFpsVisible && fps >= 55) {
+                // Hide if performance recovers significantly
+                hideFpsDisplay();
+            }
+        }
+
+        if (isFpsVisible) {
+            const display = document.getElementById('fps-counter');
+            if (display) {
+                display.innerText = `FPS: ${fps}`;
+                if (fps < 30) {
+                    display.style.color = '#ff3300';
+                    display.style.borderColor = '#ff3300';
+                    display.style.animation = 'pulse 0.5s infinite alternate';
+                } else if (fps < 45) {
+                    display.style.color = '#ffaa00';
+                    display.style.borderColor = '#ffaa00';
+                    display.style.animation = 'none';
+                } else {
+                    display.style.color = '#00ff00';
+                    display.style.borderColor = '#00ff00';
+                    display.style.animation = 'none';
+                }
+            }
+        }
+    }
+}
+
+function showFpsDisplay() {
+    let display = document.getElementById('fps-counter');
+    if (!display) {
+        display = document.createElement('div');
+        display.id = 'fps-counter';
+        display.style.position = 'fixed';
+        display.style.top = '10px';
+        display.style.right = '10px';
+        display.style.background = 'rgba(0, 0, 0, 0.7)';
+        display.style.color = '#00ff00';
+        display.style.padding = '5px 10px';
+        display.style.fontFamily = 'monospace';
+        display.style.fontSize = '14px';
+        display.style.borderRadius = '5px';
+        display.style.zIndex = '10000';
+        display.style.border = '1px solid #00ff00';
+        document.body.appendChild(display);
+    }
+    display.style.display = 'block';
+}
+
+function hideFpsDisplay() {
+    const display = document.getElementById('fps-counter');
+    if (display) display.style.display = 'none';
+    isFpsVisible = false;
+}
 
 function easeInOutCubic(x) {
     return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -852,14 +1038,17 @@ function animate() {
                 sunLight.intensity = THREE.MathUtils.lerp(sunLight.intensity, 1200, expansionSpeed);
 
                 // Camera Zoom-Out (Afastar suavemente enquanto o sol cresce)
-                const sunPos = sun.mesh.position;
-                const camDist = camera.position.distanceTo(sunPos);
-                if (camDist < 300) { // Limite de afastamento
-                    const retreatDir = new THREE.Vector3().subVectors(camera.position, sunPos).normalize();
-                    const moveVec = retreatDir.multiplyScalar(8 * delta);
-                    moveVec.y += 2.5 * delta; // Subir câmera para ângulo cinematográfico
-                    camera.position.add(moveVec);
-                    controls.target.lerp(sunPos, 2 * delta); // Manter foco no sol
+                // MODIFICAÇÃO: Só acontece se o Sol estiver focado
+                if (focusedBody && (focusedBody.type === 'sun' || focusedBody.type === 'whiteDwarf')) {
+                    const sunPos = sun.mesh.position;
+                    const camDist = camera.position.distanceTo(sunPos);
+                    if (camDist < 300) { // Limite de afastamento
+                        const retreatDir = new THREE.Vector3().subVectors(camera.position, sunPos).normalize();
+                        const moveVec = retreatDir.multiplyScalar(8 * delta);
+                        moveVec.y += 2.5 * delta; // Subir câmera para ângulo cinematográfico
+                        camera.position.add(moveVec);
+                        controls.target.lerp(sunPos, 2 * delta); // Manter foco no sol
+                    }
                 }
 
                 // Update Info Panel Name dynamically if open
@@ -911,10 +1100,50 @@ function animate() {
                 if (sun.mesh.material.opacity <= 0) {
                     sun.mesh.visible = false;
                 }
+
+                // --- MECÂNICA DE EXPANSÃO ORBITAL (Anã Branca) ---
+                // Simula a perda de massa estelar (gravidade enfraquece)
+                celestialBodies.forEach(body => {
+                    if ((body.type === 'planet' || body.type === 'dwarf' || body.type === 'moon') && body.mesh.visible) {
+                        const targetDist = body.originalDistance * 2.2; // Expansão baseada em perda de ~55% de massa
+                        const targetSpeed = body.originalSpeed * 0.2; // Translação fica muito mais lenta
+
+                        // Interpolação suave (lerp) para as novas órbitas
+                        const lerpFactor = 0.08 * delta;
+                        body.distance = THREE.MathUtils.lerp(body.distance, targetDist, lerpFactor);
+                        body.speed = THREE.MathUtils.lerp(body.speed, targetSpeed, lerpFactor);
+
+                        // Atualiza as posições físicas
+                        if (body.bodyGroup) {
+                            body.bodyGroup.position.x = body.distance;
+                        } else if (body.type === 'moon' && body.mesh) {
+                            // Luas tambem se afastam um pouco (embora a gravidade do planeta mande mais, aqui simplificamos)
+                            body.mesh.position.x = body.distance;
+                        }
+
+                        // Atualiza o desenho do caminho da órbita (Ring)
+                        if (body.orbitPath) {
+                            // Escalamos o caminho da órbita para acompanhar o planeta
+                            const orbitScale = body.distance / body.originalDistance;
+                            body.orbitPath.scale.set(orbitScale, orbitScale, 1);
+                        }
+                    }
+                });
+
+                // Expansão dos cinturões (Asteroides e Kuiper)
+                const beltLerpFactor = 0.05 * delta;
+                const targetBeltScale = 2.2;
+                if (asteroidSystem) {
+                    asteroidSystem.scale.lerp(new THREE.Vector3(targetBeltScale, targetBeltScale, targetBeltScale), beltLerpFactor);
+                }
+                if (kuiperSystem) {
+                    kuiperSystem.scale.lerp(new THREE.Vector3(targetBeltScale, targetBeltScale, targetBeltScale), beltLerpFactor);
+                }
             }
         }
     }
 
+    updateFPS();
     composer.render();
     labelRenderer.render(scene, camera);
 }
@@ -952,18 +1181,39 @@ function resetSolarSystem() {
         if (body.type === 'planet' || body.type === 'dwarf' || body.type === 'moon') {
             body.mesh.visible = true;
             if (body.orbitGroup) body.orbitGroup.visible = true;
-            if (body.orbitPath) body.orbitPath.visible = true;
+            if (body.orbitPath) {
+                body.orbitPath.visible = true;
+                body.orbitPath.scale.set(1, 1, 1); // Reset path scale
+            }
             if (body.label) body.label.element.style.display = 'block';
 
+            // Restore original orbital values
+            if (body.originalDistance !== undefined) {
+                body.distance = body.originalDistance;
+                if (body.bodyGroup) body.bodyGroup.position.x = body.distance;
+                if (body.type === 'moon' && body.mesh) body.mesh.position.x = body.distance;
+            }
+            if (body.originalSpeed !== undefined) {
+                body.speed = body.originalSpeed;
+            }
+
             // Restore rings
-            body.mesh.children.forEach(child => {
-                if (child.name === 'rings') child.visible = true;
-            });
+            if (body.bodyGroup) {
+                body.bodyGroup.children.forEach(child => {
+                    if (child.name === 'rings') child.visible = true;
+                });
+            }
         }
     });
 
-    if (asteroidSystem) asteroidSystem.visible = true;
-    if (kuiperSystem) kuiperSystem.visible = true;
+    if (asteroidSystem) {
+        asteroidSystem.visible = true;
+        asteroidSystem.scale.set(1, 1, 1);
+    }
+    if (kuiperSystem) {
+        kuiperSystem.visible = true;
+        kuiperSystem.scale.set(1, 1, 1);
+    }
 
     closeInfo(); // Close info panel
 
@@ -972,7 +1222,8 @@ function resetSolarSystem() {
     controls.enabled = true;
 
     // Adjust Camera if too close (User Request: "Sol na cara")
-    const sunPos = sun ? sun.mesh.position : new THREE.Vector3(0, 0, 0);
+    const sunBody = celestialBodies.find(b => b.type === 'sun');
+    const sunPos = sunBody ? sunBody.mesh.position : new THREE.Vector3(0, 0, 0);
     const dist = camera.position.distanceTo(sunPos);
     if (dist < 80) {
         // Move camera back to a comfortable distance
@@ -999,12 +1250,21 @@ function onMouseMove(event) {
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
     raycaster.setFromCamera(mouse, camera);
+    const sunBodyForFilter = celestialBodies.find(b => b.type === 'sun');
+    const sunMeshForFilter = sunBodyForFilter ? sunBodyForFilter.mesh : null;
+
     const meshes = celestialBodies.map(b => b.mesh).filter(m => {
-        if (!m) return false;
-        // Durante fase 3 (Anã Branca), o Sol antigo não deve bloquear o raycaster
-        if (explosionPhase === 3 && m === celestialBodies.find(b => b.type === 'sun').mesh) return false;
+        if (!m || !m.visible) return false;
+        // Na Fase 3 (Anã Branca no centro), o Sol gigante está em fade-out e bloqueia o clique.
+        // Removemos ele da lista de colisão para permitir interagir com a WD.
+        if (explosionActive && explosionPhase === 3 && m === sunMeshForFilter) return false;
         return true;
     });
+
+    if (whiteDwarfMesh && whiteDwarfMesh.visible && !meshes.includes(whiteDwarfMesh)) {
+        meshes.push(whiteDwarfMesh);
+    }
+
     const intersects = raycaster.intersectObjects(meshes);
 
     // Bloqueio de UI: Se estiver sobre o painel, não processar hover
@@ -1022,35 +1282,24 @@ function onMouseMove(event) {
         }
     }
 
-    // Check White Dwarf Hover explicitly (since it might not be in the celestialBodies list or filtered out intentionally)
-    let whiteDwarfHovered = false;
-    if (whiteDwarfMesh && whiteDwarfMesh.visible) {
-        const wdIntersects = raycaster.intersectObject(whiteDwarfMesh);
-        if (wdIntersects.length > 0) {
-            whiteDwarfHovered = true;
-            document.body.style.cursor = 'pointer';
-            // Fix: Create wrapper compatible with celestialBodies structure
-            const wdWrapper = { mesh: whiteDwarfMesh, data: whiteDwarfMesh.userData, type: 'whiteDwarf' };
-
-            if (!hoveredBody || hoveredBody.mesh !== whiteDwarfMesh) {
-                hoveredBody = wdWrapper;
-                audioManager.playHover();
-            }
-            return; // Exit early to prioritize WD
-        }
-    }
-
     if (intersects.length > 0) {
         const hitObj = intersects[0].object;
-        const body = celestialBodies.find(b => b.mesh === hitObj);
-        if (hoveredBody !== body) {
+
+        let body;
+        if (hitObj === whiteDwarfMesh) {
+            body = whiteDwarfMesh.body;
+        } else {
+            body = celestialBodies.find(b => b.mesh === hitObj);
+        }
+
+        if (body && hoveredBody !== body) {
             hoveredBody = body;
             if (hoverTimer) clearTimeout(hoverTimer);
             hoverTimer = setTimeout(() => {
                 if (hoveredBody === body) {
                     highlightBody(body, true);
                 }
-            }, 500);
+            }, 300); // Shorter hover delay for better responsiveness
         }
     } else {
         if (hoveredBody) {
@@ -1064,42 +1313,50 @@ function onMouseMove(event) {
 
 function highlightBody(body, active) {
     document.body.style.cursor = active ? 'pointer' : 'default';
+
+    if (active) {
+        audioManager.playHover();
+    }
+
     if (body.label) {
-        const labelTextDiv = body.label.element.querySelector('.label-text');
-        const infoDiv = body.infoDiv;
+        const element = body.label.element;
+        const labelTextDiv = element.querySelector('.label-text');
 
         if (active) {
-            body.label.element.classList.add('hovered');
-            audioManager.playHover();
-            labelTextDiv.style.color = '#ffff00';
-            labelTextDiv.style.textShadow = '0 0 10px #ffff00';
-            labelTextDiv.style.transform = 'scale(1.2)';
-
-            if (body.data.name !== 'Terra') {
-                if (body.mesh.material.emissive) {
-                    body.mesh.material.emissiveIntensity = 0.5;
-                    body.mesh.material.emissive.setHex(0x555555);
-                }
+            element.classList.add('hovered');
+            if (labelTextDiv) {
+                labelTextDiv.style.transform = 'scale(1.2)';
+                labelTextDiv.style.filter = 'brightness(1.5)';
             }
         } else {
-            body.label.element.classList.remove('hovered');
-            labelTextDiv.style.color = body.data.color ? '#' + new THREE.Color(body.data.color).getHexString() : 'white';
-            labelTextDiv.style.textShadow = 'none';
-            labelTextDiv.style.transform = 'scale(1)';
-            infoDiv.innerHTML = '';
-            if (body.data.name !== 'Terra') {
-                if (body.mesh.material.emissive) {
-                    // SE for o Sol e a explosão estiver ativa, NÃO resetar o emissive
-                    if (body.type === 'sun' && explosionActive) {
-                        // Maintain intensity (handled by animate loop)
-                    } else {
-                        body.mesh.material.emissiveIntensity = 0;
-                        body.mesh.material.emissive.setHex(0x000000);
-                    }
-                }
+            element.classList.remove('hovered');
+            if (labelTextDiv) {
+                labelTextDiv.style.transform = 'scale(1)';
+                labelTextDiv.style.filter = 'none';
+                labelTextDiv.style.color = body.data.color ? '#' + new THREE.Color(body.data.color).getHexString() : 'white';
+            }
+            if (body.infoDiv) body.infoDiv.innerHTML = '';
+        }
+    }
+
+    // Mesh highlighting (Emissive)
+    if (body.mesh && body.mesh.material && body.mesh.material.emissive) {
+        if (body.data.name === 'Terra') {
+            body.mesh.material.emissiveIntensity = 1.0;
+            body.mesh.material.emissive.setHex(0xffffff);
+        } else if (body.type === 'sun' || body.type === 'whiteDwarf') {
+            // Special handling for Sun/WD emissive - usually we don't want to dim them on hover
+            // unless explosion is not active. If it's the Sun, keep it bright.
+            if (body.type === 'sun' && !explosionActive) {
+                body.mesh.material.emissiveIntensity = active ? 2.5 : 2.0;
+            }
+        } else {
+            if (active) {
+                body.mesh.material.emissiveIntensity = 0.5;
+                body.mesh.material.emissive.setHex(0x555555);
             } else {
-                body.mesh.material.emissiveIntensity = 1;
-                body.mesh.material.emissive.setHex(0xffffff);
+                body.mesh.material.emissiveIntensity = 0;
+                body.mesh.material.emissive.setHex(0x000000);
             }
         }
     }
@@ -1110,32 +1367,17 @@ function onMouseClick(event) {
         // Validation before accessing properties
         if (!hoveredBody.data || !hoveredBody.mesh) return;
 
-        // Bloquear informativos de planetas destruídos
+        // Bloquear informativos de planetas destruídos ou invisíveis
         if (!hoveredBody.mesh.visible) {
             return;
         }
+
         // Bloqueio de Luas genéricas
         if (hoveredBody.type === 'moon' && hoveredBody.data.name !== 'Lua') {
             return;
         }
+
         focusOnPlanet(hoveredBody);
-    } else {
-        // Checar clique na Anã Branca via Raycaster (hoveredBody já lida com isso se estiver na lista, mas a WD é especial)
-        const mouse = new THREE.Vector2(
-            (event.clientX / window.innerWidth) * 2 - 1,
-            -(event.clientY / window.innerHeight) * 2 + 1
-        );
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouse, camera);
-        const intersects = raycaster.intersectObject(whiteDwarfMesh);
-        if (intersects.length > 0 && whiteDwarfMesh.visible) {
-            focusOnPlanet({
-                mesh: whiteDwarfMesh,
-                data: whiteDwarfMesh.userData,
-                type: 'whiteDwarf',
-                // Ensure orbitGroup/Path are ignored or handled safely if accessing them elsewhere
-            });
-        }
     }
 }
 
@@ -1301,7 +1543,7 @@ function toggleMoonCheese(enable) {
 
             cheeseTex.wrapS = THREE.RepeatWrapping;
             cheeseTex.wrapT = THREE.RepeatWrapping;
-            cheeseTex.repeat.set(0.5, 0.5);
+            cheeseTex.repeat.set(2.0, 2.0);
 
             moonMeshRef.material.map = cheeseTex;
             moonMeshRef.material.color.setHex(0xffcc00);

@@ -13,7 +13,7 @@ export const solarSystemData = {
             distance: 20,
             speed: 0.04,
             startAngle: 1.2, // Approx radians
-            color: 0xaaaaaa,
+            color: 0x999999, // Mercury - more metallic/gray
             info: { age: "4.5 Bi Anos", type: "Rochoso", desc: "O planeta mais próximo do Sol. Super quentinho de dia, congelante à noite.", translation: "88 dias", rotation: "59 dias", moons: "0" },
             textureMap: 'assets/mercury.jpg',
             moons: []
@@ -24,7 +24,7 @@ export const solarSystemData = {
             distance: 30,
             speed: 0.03,
             startAngle: 3.5,
-            color: 0xffcc88,
+            color: 0xffddaa, // Venus - brighter
             retrograde: false, // Tilt 177 handles the visual retrograde. True would double-flip it.
             tilt: 177, // Upside down effectively
             info: { age: "4.5 Bi Anos", type: "Rochoso", desc: "O planeta mais quente, com efeito estufa intenso.", translation: "225 dias", rotation: "243 dias", moons: "0" },
@@ -37,7 +37,7 @@ export const solarSystemData = {
             distance: 40,
             speed: 0.02,
             startAngle: 5.92, // ~94% of orbit (Dec 11)
-            color: 0x2233ff,
+            color: 0x00aaff, // Earth - more vibrant blue
             tilt: 23.5,
             info: { age: "4.5 Bi Anos", type: "Rochoso", desc: "Nossa casa! O único lugar conhecido com vida (e pizza).", translation: "365 dias", rotation: "24h", moons: "1" },
             textureMap: 'assets/earth_day_custom.jpg',
@@ -66,7 +66,8 @@ export const solarSystemData = {
             distance: 55,
             speed: 0.016,
             startAngle: 0.5,
-            color: 0xff4422,
+            color: 0xff4411, // Mars - more red
+            tilt: 25.2,
             info: { age: "4.5 Bi Anos", type: "Rochoso", desc: "O Planeta Vermelho. Lar de futuros colonizadores?", translation: "687 dias", rotation: "24h 37m", moons: "2" },
             textureMap: 'assets/mars.jpg',
             moons: [{ name: "Fobos", radius: 0.2, distance: 2.5, speed: 0.3, color: 0x555555 }, { name: "Deimos", radius: 0.15, distance: 3.5, speed: 0.2, color: 0x555555 }]
@@ -77,7 +78,8 @@ export const solarSystemData = {
             distance: 80,
             speed: 0.008,
             startAngle: 2.2,
-            color: 0xcc9966,
+            color: 0xffaa77, // Jupiter - richer
+            tilt: 3.1,
             info: { age: "4.5 Bi Anos", type: "Gigante Gasoso", desc: "O maior planeta. Uma tempestade eterna chamada Grande Mancha Vermelha.", translation: "12 anos", rotation: "9h 55m", moons: "95" },
             textureMap: 'assets/jupiter.jpg',
             moons: [
@@ -107,7 +109,7 @@ export const solarSystemData = {
             distance: 140,
             speed: 0.004,
             startAngle: 1.0,
-            color: 0x66ccff,
+            color: 0x88eeff, // Uranus - vibrant cyan
             tilt: 98, // Rolling on side
             info: { age: "4.5 Bi Anos", type: "Gigante de Gelo", desc: "Gira de lado. Muito frio.", translation: "84 anos", rotation: "17h 14m", moons: "28" },
             textureMap: 'assets/uranus.jpg',
@@ -119,7 +121,8 @@ export const solarSystemData = {
             distance: 165,
             speed: 0.003,
             startAngle: 6.0,
-            color: 0x3366cc,
+            color: 0x4488ff, // Neptune - deeper blue
+            tilt: 28.3,
             info: { age: "4.5 Bi Anos", type: "Gigante de Gelo", desc: "Ventos supersônicos e muito azul.", translation: "165 anos", rotation: "16h", moons: "16" },
             textureMap: 'assets/neptune.jpg',
             moons: [{ name: "Tritão", radius: 0.5, distance: 6, speed: 0.05, color: 0xffcccc }]

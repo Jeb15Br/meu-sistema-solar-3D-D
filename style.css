@@ -293,3 +293,15 @@ input[type=range] {
 .secret-trigger-btn:active {
     transform: scale(0.98);
 }
+
+@keyframes pulse {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    to {
+        opacity: 0.7;
+        transform: scale(1.05);
+    }
+}
