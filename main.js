@@ -377,7 +377,8 @@ function toggleDeepSleep(shouldSleep) {
 const audioManager = {
     playlist: [
         'assets/musics/Aria Math.mp3',
-        'assets/musics/Droppy likes your Face.mp3'
+        'assets/musics/Droppy likes your Face.mp3',
+        'assets/musics/The Guardian of The Threshold.mp3'
     ],
     currentIndex: 0,
     element: null,
@@ -513,7 +514,8 @@ const audioManager = {
         const prettyNames = {
             'Aria Math': 'Aria Math - C418',
             'Droppy likes your Face': 'Droopy likes your Face - C418',
-            'Droopy likes your Face': 'Droopy likes your Face - C418' // Caso corrija o arquivo
+            'Droopy likes your Face': 'Droopy likes your Face - C418', // Caso corrija o arquivo
+            'The Guardian of The Threshold': 'The Guardian of The Threshold - I Think I Can Help You'
         };
 
         const songName = prettyNames[rawName] || (rawName + ' - Unknown Author');
@@ -1042,8 +1044,6 @@ let whiteDwarfMesh = null;
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let hoveredBody = null;
-let hoverTimer = null;
-let hasShownWarning = false;
 const keyState = {};
 
 // --- PERSISTÊNCIA E ÁUDIO DE RESET ---
@@ -2664,20 +2664,16 @@ function onMouseMove(event) {
         }
 
         if (body && hoveredBody !== body) {
+            // [FIX] Seleção INSTANTÂNEA sem delay proposital
+            if (hoveredBody) highlightBody(hoveredBody, false);
             hoveredBody = body;
-            if (hoverTimer) clearTimeout(hoverTimer);
-            hoverTimer = setTimeout(() => {
-                if (hoveredBody === body) {
-                    highlightBody(body, true);
-                }
-            }, 250); // Reduced from 300ms to 250ms (0.25s) as requested
+            highlightBody(body, true);
         }
     } else {
         if (hoveredBody) {
             highlightBody(hoveredBody, false);
             hoveredBody = null;
         }
-        if (hoverTimer) clearTimeout(hoverTimer);
         document.body.style.cursor = 'default';
     }
 }
