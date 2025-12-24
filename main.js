@@ -18,7 +18,7 @@ let lastRenderTime = 0;
 let lastTime = performance.now(); // For FPS calculation
 const SLEEP_DELAY_MS = 10000; // Reduzido para 10s para o usuário sentir a economia
 const BACKGROUND_FPS = 15; // Aumentado para 15 FPS para manter fluidez mínima no fundo
-const UI_FPS = 15; // 15 FPS para manter fluidez mínima quando MODAIS estiverem abertos
+const UI_FPS = 60; // Aumentado para 60 FPS para máxima fluidez em PCs potentes
 let isInteractingWithUI = false; // Flag para bloquear tudo quando menu/modal estiver aberto
 let isModalOpen = false; // Flag específica para modais (que travam tudo)
 let selectedMenuItemIndex = -1; // Para navegação por teclado 
@@ -845,7 +845,11 @@ function showAboutProject() {
         
         <p>Em breve eu irei colocar novas funções, mecânicas, mais planetas e quem sabe expandir para o nível de poder ver as galáxias.</p>
         
-        <p style="margin-top: 20px; font-size: 0.8em; color: #888; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Data da última atualização: 23/12/2025</p>
+        <p style="margin-top: 20px; font-size: 0.8em; color: #888; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Data da última atualização: 24/12/2025</p>
+        <p style="color: #666; font-size: 0.75em; padding-top: 5px;">
+            ⚠️ <b>Performance:</b> Se notar lentidão (ex: 30 FPS parado), verifique se o Edge está em 
+            "Modo de Eficiência" ou se a Aceleração de Hardware está ativada.
+        </p>
     `;
     createInfoModal('📖 SOBRE O PROJETO', html);
 }
@@ -1147,7 +1151,7 @@ function init() {
 
     // --- REATIVANDO BLOOM (BRILHO NEON) ---
     const bloomPass = new UnrealBloomPass(
-        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        new THREE.Vector2(window.innerWidth / 2, window.innerHeight / 2), // Otimização: Renderizar Bloom em meia resolução
         1.0,  // Strength contida para evitar saturação
         0.15, // Radius minimalista para não engolir planetas próximos
         0.8   // Threshold alto: apenas fontes de luz brilham
@@ -2110,12 +2114,7 @@ function animate() {
 
     const now = performance.now();
     // --- OTIMIZAÇÃO DE PERFORMANCE INTELIGENTE ---
-    // 1. Se um MODAL está aberto, capamos em 15 FPS (Economia para leitura/texto)
-    // Nota: isInteractingWithUI é true para o menu também, mas isModalOpen só para Toasts
-    if (isModalOpen && !isFlying) { // EXCEÇÃO: Se estiver voando, mantém 60fps
-        const elapsed = (now - lastRenderTime);
-        if (elapsed < (1000 / UI_FPS)) return;
-    }
+    // [OTIMIZAÇÃO] Limitador de FPS para UI removido para garantir 60 FPS constantes em PCs potentes.
     // 2. Se a aba está escondida, capamos em 1 FPS (Economia Extrema)
     else if (!isPageVisible) {
         const elapsed = (now - lastRenderTime);
