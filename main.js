@@ -2116,7 +2116,7 @@ function animate() {
     // --- OTIMIZAÇÃO DE PERFORMANCE INTELIGENTE ---
     // [OTIMIZAÇÃO] Limitador de FPS para UI removido para garantir 60 FPS constantes em PCs potentes.
     // 2. Se a aba está escondida, capamos em 1 FPS (Economia Extrema)
-    else if (!isPageVisible) {
+    if (!isPageVisible) {
         const elapsed = (now - lastRenderTime);
         if (elapsed < (1000 / BACKGROUND_FPS)) return;
     }
