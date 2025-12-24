@@ -47,13 +47,14 @@ export const solarSystemData = {
                 radius: 0.5,
                 distance: 4,
                 speed: 0.1,
+                startAngle: 1.5, // Começar ao lado da Terra (visível)
                 color: 0x888888,
                 textureMap: 'assets/moon.jpg',
                 tilt: 5,
                 info: {
                     age: "4.5 Bi Anos",
                     type: "Satélite",
-                    desc: "Nossa fiel companheira. <span class='secret-interaction'>Queijo suíço?</span>",
+                    desc: "Nossa fiel companheira. <span class='secret-interaction' data-category='moon'>Queijo suíço?</span>",
                     translation: "27 dias",
                     rotation: "27 dias",
                     moons: "0"
@@ -136,7 +137,7 @@ export const solarSystemData = {
             speed: 0.002,
             startAngle: 3.0,
             color: 0xccccaa,
-            info: { age: "4.5 Bi Anos", type: "Planeta Anão", desc: "Rebaixado à Série B dos planetas, mas jamais esquecido, <span class='secret-interaction'>brutal, não sobrou nada pro beta</span>. Coração gelado.", translation: "248 anos", rotation: "6 dias", moons: "5" },
+            info: { age: "4.5 Bi Anos", type: "Planeta Anão", desc: "Rebaixado à Série B dos planetas, mas jamais esquecido, <span class='secret-interaction' data-category='pluto'>brutal, não sobrou nada pro beta.</span> Coração gelado.", translation: "248 anos", rotation: "6 dias", moons: "5" },
             textureMap: 'assets/pluto.jpg'
         }
     ],
@@ -148,6 +149,21 @@ export const solarSystemData = {
             desc: "O núcleo denso que restou após o Sol esgotar seu combustível e expelir suas camadas externas. É extremamente quente e densa.",
             rotation: "Horas/Dias",
             moons: "0"
+        }
+    },
+    fluminense: {
+        name: "Planeta Fluminense",
+        radius: 4.5,
+        distance: 130, // Órbita entre Saturno e Urano
+        speed: 0.005,
+        color: 0x800000, // Grená
+        info: {
+            age: "Eterno",
+            type: "Planeta Tricolor",
+            desc: "Um planeta habitado por torcedores tricolores. Sua órbita é única e inclinada, desafiando a física comum, assim como o talento do time das Laranjeiras.",
+            translation: "Varia (Guerreiro)",
+            rotation: "90 min",
+            moons: "1 (Libertadores)"
         }
     }
 };

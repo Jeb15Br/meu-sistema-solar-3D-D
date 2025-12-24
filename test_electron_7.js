@@ -1,1 +1,0 @@
-const electron = require('electron'); if (typeof electron === 'string') { console.log('Path:', electron); } else { console.log('Object found'); }

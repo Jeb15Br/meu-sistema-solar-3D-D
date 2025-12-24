@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Solar System</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=FORCE_UPDATE_FINAL_13">
     <script type="importmap">
         {
             "imports": {
@@ -39,8 +39,7 @@
         </div>
     </div>
 
-    <!-- Start Overlay - REMOVED -->
-    <!-- <div id="start-overlay"></div> -->
+
 
     <!-- Info Panel -->
     <div id="info-panel" class="hidden">
@@ -55,16 +54,25 @@
     </div>
 
     <!-- Audio -->
-    <audio id="bg-music" loop>
+    <audio id="bg-music">
         <!-- Coloque seu arquivo 'music.mp3' na pasta 'assets' -->
-        <source src="assets/music.mp3" type="audio/mp3">
+        <source src="assets/musics/Aria Math.mp3" type="audio/mp3">
         <!-- Fallback para teste se não houver arquivo local -->
         <source src="https://assets.mixkit.co/music/preview/mixkit-stars-in-space-605.mp3" type="audio/mp3">
         Your browser does not support the audio element.
     </audio>
     <button id="audio-btn">🔈 Música</button>
+    <div id="info-menu" class="hidden">
+        <div class="info-menu-item" id="menu-about">📖 Sobre o Projeto</div>
+        <div class="info-menu-item" id="menu-camera">📸 Controle de Câmera</div>
+        <div class="info-menu-item" id="menu-planets">🪐 Planetas e Interação</div>
+        <div class="info-menu-item" id="menu-keyboard">⌨️ Atalhos do Teclado</div>
+        <div class="info-menu-item" id="menu-easter">🥚 Easter Eggs</div>
+        <div class="info-menu-item" id="menu-credits">💎 Créditos</div>
+    </div>
+    <button id="info-btn" title="Controles e Ajuda">ℹ️</button>
 
-    <script type="module" src="main.js?v=75"></script>
+    <script type="module" src="main.js?v=FORCE_UPDATE_FINAL_1"></script>
 </body>
 
 </html>

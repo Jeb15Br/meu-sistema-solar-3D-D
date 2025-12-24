@@ -4,7 +4,7 @@
  */
 
 // Error Sound (Optional - acts as fallback or placeholder)
-const audioError = new Audio('assets/sound_effects/hover.mp3'); // Using available sound for now
+const audioError = null; // Áudio desativado para evitar 404
 
 window.RPOD = {
     init: function () {
@@ -132,6 +132,8 @@ window.RPOD = {
                 transition: 'border-color 0.3s'
             });
 
+            const isRivalError = msg.includes("Time Pequeno");
+
             card.innerHTML = `
                 <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
                     <strong class="rpod-msg-title" style="color:#ffdddd; font-size:1.1em;">${msg} (1x)</strong>
@@ -140,7 +142,7 @@ window.RPOD = {
                 <pre style="background:rgba(0,0,0,0.3); padding:10px; overflow-x:auto; margin:0; font-size:0.85em; color:#ddd; border: 1px solid #400;">${stack}</pre>
                 <div style="text-align:right; margin-top:10px;">
                      <button class="btn-copy-single" 
-                        style="padding:5px 10px; background:#333; color:#ccc; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:0.8em;">
+                        style="padding:5px 10px; background:#333; color:#ccc; border:1px solid #555; border-radius:4px; cursor:pointer; font-size:0.8em; display: ${isRivalError ? 'none' : 'inline-block'};">
                         📋 Copiar
                     </button>
                 </div>
@@ -169,6 +171,25 @@ window.RPOD = {
         container.scrollTop = container.scrollHeight;
 
         console.error("RPOD Triggered:", msg, error);
+
+        // --- ENVIAR PARA O TERMINAL (User Request - Exclusive Locally) ---
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        if (isLocal) {
+            fetch('http://localhost:9999/log', {
+                method: 'POST',
+                mode: 'cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    msg: msg,
+                    stack: stack,
+                    timestamp: timestamp
+                })
+            }).catch(err => {
+                // Silencioso se o servidor não estiver rodando
+            });
+        }
+
+
         return false;
     },
 
