@@ -1,6 +1,10 @@
 import * as THREE from 'three';
-import { state, saveEggs } from './GameState.js';
-import { audioManager } from './AudioManager.js';
+// [FIX] State injected via init to avoid module duplication issues
+// import { state, saveEggs } from './GameState.js';
+import { saveEggs } from './GameState.js?v=2'; // Keep saveEggs helper
+import { audioManager } from './AudioManager.js?v=2';
+
+let appState = null;
 
 // Internal Interaction State (Senses)
 export const inputState = {
@@ -18,13 +22,51 @@ export const inputState = {
 
 let uiCallbacks = {};
 
-export function initInput(callbacks) {
+export function initInput(state, callbacks) {
+    appState = state;
     uiCallbacks = callbacks;
+    setupInputListeners();
+}
 
+function setupInputListeners() {
     window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     window.addEventListener('keyup', handleGlobalKeyUp, { capture: true });
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('click', onMouseClick);
+    window.addEventListener('contextmenu', onRightClick, { capture: true });
+}
+
+function handleBackAction() {
+    // 1. Modal Overlay
+    if (appState.isModalOpen) {
+        if (uiCallbacks.closeActiveModal) uiCallbacks.closeActiveModal();
+        return true;
+    }
+
+    // 2. Main Menu
+    const infoMenu = document.getElementById('info-menu');
+    if (infoMenu && !infoMenu.classList.contains('hidden')) {
+        infoMenu.classList.add('hidden');
+        appState.isInteractingWithUI = false;
+        // Restore controls if this was the last blocker
+        if (appState.controls) {
+            appState.controls.enabled = true;
+            appState.controls.enableKeys = true;
+        }
+        return true;
+    }
+
+    // 3. Planet Info Panel
+    // Check global focused body or visibility of panel
+    const infoPanel = document.getElementById('info-panel');
+    const isPanelVisible = infoPanel && !infoPanel.classList.contains('hidden');
+
+    if (appState.focusedBody || isPanelVisible) {
+        if (uiCallbacks.closeInfo) uiCallbacks.closeInfo();
+        return true;
+    }
+
+    return false;
 }
 
 // --- KEYBOARD LOGIC ---
@@ -60,7 +102,7 @@ function handleGlobalKeyDown(e) {
         }
 
         if (inputState.typedBuffer.includes("fluminense")) {
-            const alreadyExists = state.celestialBodies.some(b => b.isEasterEgg && b.data.name === "Fluminense");
+            const alreadyExists = appState.celestialBodies.some(b => b.isEasterEgg && b.data.name === "Planeta Fluminense");
             if (alreadyExists) {
                 console.log("🏆 Fluminense já está em campo!");
                 inputState.typedBuffer = "";
@@ -68,14 +110,14 @@ function handleGlobalKeyDown(e) {
                 return;
             }
 
-            if (state.isTimePaused && uiCallbacks.toggleTimePause) uiCallbacks.toggleTimePause();
-            if (state.isModalOpen && uiCallbacks.closeActiveModal) uiCallbacks.closeActiveModal();
-            state.isInteractingWithUI = false;
+            // [FIX] Removed auto-unpause logic
+            if (appState.isModalOpen && uiCallbacks.closeActiveModal) uiCallbacks.closeActiveModal();
+            appState.isInteractingWithUI = false;
 
             console.log("🏆 VENCE O FLUMINENSE! Easter Egg Ativado.");
             if (uiCallbacks.createFluminensePlanet) uiCallbacks.createFluminensePlanet();
 
-            if (!state.eggsFound.fluminense) {
+            if (!appState.eggsFound.fluminense) {
                 audioManager.playSecretAction('fluminense', uiCallbacks.showEasterToast);
             } else if (audioManager.playHover) {
                 audioManager.playHover();
@@ -110,9 +152,28 @@ function handleGlobalKeyDown(e) {
         return;
     }
 
+    // Spacebar: Toggle Time Pause
+    if (e.code === 'Space') {
+        e.preventDefault();
+        if (uiCallbacks.toggleTimePause) uiCallbacks.toggleTimePause();
+        return;
+    }
+
+    // ESC Handler (Global Priority)
+    if (e.code === 'Escape') {
+        e.preventDefault(); e.stopImmediatePropagation();
+
+        if (handleBackAction()) return;
+
+        // 4. Fallback: Open Main Menu
+        const infoBtn = document.getElementById('info-btn');
+        if (infoBtn) infoBtn.click();
+        return;
+    }
+
     // BLOQUEIO UI
-    if (state.isInteractingWithUI || state.isModalOpen) {
-        if (e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') {
+    if (appState.isInteractingWithUI || appState.isModalOpen) {
+        if (e.code.startsWith('Arrow') || e.code === 'Enter' || e.code === 'Space') {
             const infoMenu = document.getElementById('info-menu');
             if (infoMenu && !infoMenu.classList.contains('hidden')) {
                 const items = Array.from(document.querySelectorAll('.info-menu-item'));
@@ -133,7 +194,7 @@ function handleGlobalKeyDown(e) {
                 }
             }
 
-            if ((e.code === 'Enter' || e.code === 'Space') && state.isModalOpen) {
+            if ((e.code === 'Enter' || e.code === 'Space') && appState.isModalOpen) {
                 const closeBtn = document.getElementById('close-modal-btn');
                 if (closeBtn) {
                     e.preventDefault(); e.stopImmediatePropagation();
@@ -142,57 +203,22 @@ function handleGlobalKeyDown(e) {
                 }
             }
 
-            if (e.code === 'Escape') {
-                e.preventDefault(); e.stopImmediatePropagation();
-                if (state.isModalOpen) {
-                    if (uiCallbacks.closeActiveModal) uiCallbacks.closeActiveModal();
-                } else if (infoMenu && !infoMenu.classList.contains('hidden')) {
-                    infoMenu.classList.add('hidden');
-                    state.isInteractingWithUI = false;
-                    if (state.controls) {
-                        state.controls.enabled = true;
-                        state.controls.enableKeys = true;
-                    }
-                } else if (state.focusedBody) {
-                    if (uiCallbacks.closeInfo) uiCallbacks.closeInfo();
-                }
-                return;
-            }
-
             if (e.code.startsWith('Arrow') || e.code === 'Space') {
                 e.stopImmediatePropagation(); e.preventDefault();
             }
         }
     }
 
-    if (e.code === 'KeyI' && !state.isModalOpen) {
+    if (e.code === 'KeyI' && !appState.isModalOpen) {
         e.preventDefault();
         const infoBtn = document.getElementById('info-btn');
         if (infoBtn) infoBtn.click();
     }
 
-    // Zoom (Z/X)
-    if (!state.isInteractingWithUI && !state.isModalOpen) {
-        if (e.code === 'KeyZ') {
-            const dist = state.camera.position.distanceTo(state.controls.target);
-            if (dist > state.controls.minDistance) {
-                const moveDir = new THREE.Vector3().subVectors(state.controls.target, state.camera.position).normalize();
-                state.camera.position.add(moveDir.multiplyScalar(dist * 0.1));
-                state.controls.update();
-            }
-        } else if (e.code === 'KeyX') {
-            const dist = state.camera.position.distanceTo(state.controls.target);
-            if (dist < state.controls.maxDistance) {
-                const moveDir = new THREE.Vector3().subVectors(state.camera.position, state.controls.target).normalize();
-                state.camera.position.add(moveDir.multiplyScalar(dist * 0.1));
-                state.controls.update();
-            }
-        }
-    }
 
     // Reset Easter Eggs (Delete)
     if (e.code === 'Delete') {
-        const hasAnyEgg = Object.values(state.eggsFound).some(v => v === true);
+        const hasAnyEgg = Object.values(appState.eggsFound).some(v => v === true);
         if (hasAnyEgg && !inputState.eggResetTimer) {
             inputState.eggResetToast = document.createElement('div');
             inputState.eggResetToast.style.cssText = `
@@ -210,8 +236,8 @@ function handleGlobalKeyDown(e) {
                 if (secondsLeft <= 0) {
                     clearInterval(inputState.eggResetTimer);
                     inputState.eggResetTimer = null;
-                    state.eggsFound = { pluto: false, moon: false, fluminense: false };
-                    saveEggs();
+                    appState.eggsFound = { pluto: false, moon: false, fluminense: false };
+                    saveEggs(appState.eggsFound);
                     if (audioManager.playResetSound) audioManager.playResetSound();
                     inputState.eggResetToast.style.background = 'rgba(0, 255, 100, 0.9)';
                     inputState.eggResetToast.innerHTML = '✨ Segredos resetados com sucesso!';
@@ -236,24 +262,24 @@ function handleGlobalKeyUp(e) {
 
 // --- MOUSE LOGIC ---
 function onMouseMove(event) {
-    if (state.isInteractingWithUI) return;
+    if (appState.isInteractingWithUI) return;
     if (inputState.isHoveringLabel) return;
 
     inputState.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
     inputState.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-    inputState.raycaster.setFromCamera(inputState.mouse, state.camera);
+    inputState.raycaster.setFromCamera(inputState.mouse, appState.camera);
 
-    const sunBodyForFilter = state.celestialBodies.find(b => b.type === 'sun');
+    const sunBodyForFilter = appState.celestialBodies.find(b => b.type === 'sun');
     const sunMeshForFilter = sunBodyForFilter ? sunBodyForFilter.mesh : null;
 
-    const meshes = state.celestialBodies.map(b => b.mesh).filter(m => {
+    const meshes = appState.celestialBodies.map(b => b.mesh).filter(m => {
         if (!m || !m.visible) return false;
-        if (state.explosionActive && state.explosionPhase === 3 && m === sunMeshForFilter) return false;
+        if (appState.explosionActive && appState.explosionPhase === 3 && m === sunMeshForFilter) return false;
         return true;
     });
 
-    if (state.whiteDwarfMesh && state.whiteDwarfMesh.visible && !meshes.includes(state.whiteDwarfMesh)) {
-        meshes.push(state.whiteDwarfMesh);
+    if (appState.whiteDwarfMesh && appState.whiteDwarfMesh.visible && !meshes.includes(appState.whiteDwarfMesh)) {
+        meshes.push(appState.whiteDwarfMesh);
     }
 
     const intersects = inputState.raycaster.intersectObjects(meshes);
@@ -264,9 +290,9 @@ function onMouseMove(event) {
         if (event.clientX >= rect.left && event.clientX <= rect.right &&
             event.clientY >= rect.top && event.clientY <= rect.bottom) {
             document.body.style.cursor = 'default';
-            if (state.hoveredBody) {
-                highlightBody(state.hoveredBody, false);
-                state.hoveredBody = null;
+            if (appState.hoveredBody) {
+                highlightBody(appState.hoveredBody, false);
+                appState.hoveredBody = null;
             }
             return;
         }
@@ -275,62 +301,71 @@ function onMouseMove(event) {
     if (intersects.length > 0) {
         const hitObj = intersects[0].object;
         let body;
-        if (hitObj === state.whiteDwarfMesh) {
-            body = state.whiteDwarfMesh.body;
+        if (hitObj === appState.whiteDwarfMesh) {
+            body = appState.whiteDwarfMesh.body;
         } else {
-            body = state.celestialBodies.find(b => b.mesh === hitObj);
+            body = appState.celestialBodies.find(b => b.mesh === hitObj);
         }
 
-        if (body && state.hoveredBody !== body) {
-            if (state.hoveredBody) highlightBody(state.hoveredBody, false);
-            state.hoveredBody = body;
+        if (body && appState.hoveredBody !== body) {
+            if (appState.hoveredBody) highlightBody(appState.hoveredBody, false);
+            appState.hoveredBody = body;
             highlightBody(body, true);
         }
     } else {
-        if (state.hoveredBody) {
-            highlightBody(state.hoveredBody, false);
-            state.hoveredBody = null;
+        if (appState.hoveredBody) {
+            highlightBody(appState.hoveredBody, false);
+            appState.hoveredBody = null;
         }
         document.body.style.cursor = 'default';
     }
 }
 
 function onMouseClick(event) {
-    if (state.isInteractingWithUI) return;
-    if (state.hoveredBody) {
-        if (!state.hoveredBody.data || !state.hoveredBody.mesh) return;
-        if (!state.hoveredBody.mesh.visible) return;
-        if (state.hoveredBody.type === 'moon' && state.hoveredBody.data.name !== 'Lua') return;
-        focusOnPlanet(state.hoveredBody);
+    if (appState.isInteractingWithUI) return;
+    if (appState.hoveredBody) {
+        if (!appState.hoveredBody.data || !appState.hoveredBody.mesh) return;
+        if (!appState.hoveredBody.mesh.visible) return;
+        if (appState.hoveredBody.type === 'moon' && appState.hoveredBody.data.name !== 'Lua') return;
+        focusOnPlanet(appState.hoveredBody);
     }
+}
+
+function onRightClick(event) {
+    // Prevent default context menu
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Trigger "Back" logic
+    handleBackAction();
 }
 
 // --- SPECIALIZED INTERACTION ---
 export function focusOnPlanet(body) {
     if (!body || !body.mesh) return;
 
-    if (isNaN(state.camera.position.x) || isNaN(state.camera.position.y) || isNaN(state.camera.position.z)) {
-        state.camera.position.set(0, 100, 200);
-        state.camera.lookAt(0, 0, 0);
+    if (isNaN(appState.camera.position.x) || isNaN(appState.camera.position.y) || isNaN(appState.camera.position.z)) {
+        appState.camera.position.set(0, 100, 200);
+        appState.camera.lookAt(0, 0, 0);
     }
 
     if (body.mesh.parent) body.mesh.parent.updateMatrixWorld(true);
     body.mesh.updateMatrixWorld(true);
-    state.scene.updateMatrixWorld(true);
+    appState.scene.updateMatrixWorld(true);
 
-    if (state.focusedBody && state.focusedBody.data.name === 'Lua' && state.isCheeseMode && state.focusedBody !== body) {
+    if (appState.focusedBody && appState.focusedBody.data.name === 'Lua' && appState.isCheeseMode && appState.focusedBody !== body) {
         if (uiCallbacks.toggleMoonCheese) uiCallbacks.toggleMoonCheese(false);
     }
 
-    if (state.focusedBody === body && state.isModalOpen) return;
+    if (appState.focusedBody === body && appState.isModalOpen) return;
 
-    state.focusedBody = body;
+    appState.focusedBody = body;
     if (uiCallbacks.updateInfoPanel) uiCallbacks.updateInfoPanel(body);
 
     const infoPanel = document.getElementById('info-panel');
     if (infoPanel) infoPanel.classList.remove('hidden');
-    state.isModalOpen = true;
-    if (state.controls) state.controls.enableKeys = false;
+    // appState.isModalOpen = true; // [FIX] Side panel is not a modal overlay
+    if (appState.controls) appState.controls.enableKeys = false;
 
     const targetPos = new THREE.Vector3();
     body.mesh.getWorldPosition(targetPos);
@@ -350,7 +385,7 @@ export function focusOnPlanet(body) {
         else targetPos.set(100, 0, 0);
     }
 
-    const currentVec = new THREE.Vector3().subVectors(state.camera.position, targetPos);
+    const currentVec = new THREE.Vector3().subVectors(appState.camera.position, targetPos);
     if (currentVec.lengthSq() < 0.001) currentVec.set(0, 0, 1);
 
     const zoomPos = targetPos.clone().add(currentVec.normalize().multiplyScalar(distance));
@@ -362,26 +397,26 @@ export function focusOnPlanet(body) {
     const dayPos = targetPos.clone().add(toSun.multiplyScalar(distance));
     dayPos.y += yOffset;
 
-    state.isFlying = true;
-    state.flightStartTime = performance.now();
-    state.flightDuration = 1000;
-    state.controls.enabled = false;
+    appState.isFlying = true;
+    appState.flightStartTime = performance.now();
+    appState.flightDuration = 1000;
+    appState.controls.enabled = false;
 
-    state.flightStartPos = state.camera.position.clone();
-    state.flightEndPos = (body.type === 'sun' || body.type === 'whiteDwarf' ? zoomPos : dayPos);
-    state.flightStartTarget = state.controls.target.clone();
-    state.flightEndTarget = targetPos.clone();
+    appState.flightStartPos = appState.camera.position.clone();
+    appState.flightEndPos = (body.type === 'sun' || body.type === 'whiteDwarf' ? zoomPos : dayPos);
+    appState.flightStartTarget = appState.controls.target.clone();
+    appState.flightEndTarget = targetPos.clone();
 
-    if (isNaN(state.flightEndPos.x) || isNaN(state.flightEndPos.y) || isNaN(state.flightEndPos.z)) {
-        state.focusedBody = null;
-        state.camera.position.set(0, 100, 200);
-        state.camera.lookAt(0, 0, 0);
-        state.controls.target.set(0, 0, 0);
-        state.isFlying = false;
+    if (isNaN(appState.flightEndPos.x) || isNaN(appState.flightEndPos.y) || isNaN(appState.flightEndPos.z)) {
+        appState.focusedBody = null;
+        appState.camera.position.set(0, 100, 200);
+        appState.camera.lookAt(0, 0, 0);
+        appState.controls.target.set(0, 0, 0);
+        appState.isFlying = false;
         return;
     }
 
-    state.controls.enablePan = false;
+    appState.controls.enablePan = false;
 }
 
 export function highlightBody(body, active) {
@@ -418,13 +453,13 @@ export function highlightBody(body, active) {
             body.mesh.material.emissiveIntensity = 1.0;
             body.mesh.material.emissive.setHex(0xffffff);
         } else if (body.type === 'sun' || body.type === 'whiteDwarf') {
-            if (state.explosionActive && body.type === 'sun') return;
+            if (appState.explosionActive && body.type === 'sun') return;
             if (body.type === 'whiteDwarf') {
                 body.mesh.material.emissive.setHex(0xffffff);
                 body.mesh.material.emissiveIntensity = 4.0;
             } else {
                 body.mesh.material.emissiveIntensity = 2.5;
-                body.mesh.material.emissive.setHex(state.explosionActive ? 0xff4400 : 0xffaa00);
+                body.mesh.material.emissive.setHex(appState.explosionActive ? 0xff4400 : 0xffaa00);
             }
         } else {
             if (active) {

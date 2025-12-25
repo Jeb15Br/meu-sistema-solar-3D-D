@@ -1,10 +1,14 @@
 import * as THREE from 'three';
-import { state, saveEggs } from './GameState.js';
-import { audioManager } from './AudioManager.js';
+// [FIX] State injected via init to avoid module duplication issues
+// import { state, saveEggs } from './GameState.js'; 
+import { saveEggs } from './GameState.js?v=2'; // Keep saveEggs helper
+import { audioManager } from './AudioManager.js?v=2';
 
+let appState = null;
 let uiCallbacks = {};
 
-export function initUI(callbacks) {
+export function initUI(state, callbacks) {
+    appState = state;
     uiCallbacks = callbacks;
 }
 
@@ -19,21 +23,21 @@ export function setupMenu() {
 
             if (uiInfoMenu.classList.contains('hidden')) {
                 uiInfoMenu.classList.remove('hidden');
-                state.isInteractingWithUI = true;
+                appState.isInteractingWithUI = true;
                 // Note: selectedMenuItemIndex is in InputManager, we might want to reset it here if we had access
                 // For now, InputManager handles keyboard nav when isInteractingWithUI is true.
                 document.body.style.cursor = 'default';
 
-                if (state.controls) {
-                    state.controls.enabled = false;
-                    state.controls.enableKeys = false;
+                if (appState.controls) {
+                    appState.controls.enabled = false;
+                    appState.controls.enableKeys = false;
                 }
             } else {
                 uiInfoMenu.classList.add('hidden');
-                state.isInteractingWithUI = false;
-                if (state.controls) {
-                    state.controls.enabled = true;
-                    state.controls.enableKeys = true;
+                appState.isInteractingWithUI = false;
+                if (appState.controls) {
+                    appState.controls.enabled = true;
+                    appState.controls.enableKeys = true;
                 }
             }
             audioManager.playHover();
@@ -79,6 +83,71 @@ export function setupMenu() {
             item.addEventListener('mouseenter', () => {
                 audioManager.playHover();
             });
+        });
+
+        const closeInfoBtn = document.getElementById('close-info');
+        if (closeInfoBtn) {
+            closeInfoBtn.onclick = (e) => {
+                e.stopPropagation();
+                closeInfo();
+            };
+        }
+    }
+}
+
+export function setupTimeControls() {
+    const timeSlider = document.getElementById('timeSlider');
+    const pauseBtn = document.getElementById('pause-time-btn');
+    const resetBtn = document.getElementById('reset-date-btn');
+    const realTimeBtn = document.getElementById('real-time-btn');
+    const timeDisplay = document.getElementById('time-display');
+
+    if (timeSlider) {
+        timeSlider.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            const absVal = Math.abs(val);
+            const sign = val < 0 ? -1 : 1;
+            const daysPerSec = Math.pow(absVal, 2) / 10;
+            appState.timeScale = daysPerSec * sign;
+            appState.isRealTime = false;
+            if (realTimeBtn) realTimeBtn.classList.remove('active');
+
+            const signStr = sign < 0 ? "-" : "";
+            if (timeDisplay) timeDisplay.innerText = `Velocidade: ${signStr}${daysPerSec.toFixed(1)} dias/s`;
+        });
+
+        // [FIX] Remover foco do slider para evitar conflito com setas da câmera
+        timeSlider.addEventListener('mouseup', () => timeSlider.blur());
+        timeSlider.addEventListener('touchend', () => timeSlider.blur());
+    }
+
+    if (pauseBtn) {
+        pauseBtn.addEventListener('click', () => {
+            appState.isTimePaused = !appState.isTimePaused;
+            pauseBtn.innerText = appState.isTimePaused ? '▶️ Continuar' : 'Pausar Tempo';
+        });
+    }
+
+    if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+            appState.currentDate = new Date();
+            appState.currentYearAstronomical = null;
+            if (timeSlider) {
+                timeSlider.value = 0;
+                timeSlider.dispatchEvent(new Event('input'));
+            }
+        });
+    }
+
+    if (realTimeBtn) {
+        realTimeBtn.addEventListener('click', () => {
+            appState.isRealTime = true;
+            if (timeSlider) {
+                timeSlider.value = 0;
+                appState.timeScale = 1 / 86400;
+            }
+            if (timeDisplay) timeDisplay.innerText = `Velocidade: Tempo Real`;
+            realTimeBtn.classList.add('active');
         });
     }
 }
@@ -251,18 +320,18 @@ export function closeActiveModal() {
         const infoMenu = document.getElementById('info-menu');
         if (shouldRestoreMenu && infoMenu) {
             infoMenu.classList.remove('hidden');
-            state.isInteractingWithUI = true;
+            appState.isInteractingWithUI = true;
         }
 
         const isMenuOpen = infoMenu && !infoMenu.classList.contains('hidden');
         if (!isMenuOpen) {
-            state.isInteractingWithUI = false;
-            if (state.controls) state.controls.enabled = true;
+            appState.isInteractingWithUI = false;
+            if (appState.controls) appState.controls.enabled = true;
         }
 
-        state.isModalOpen = false;
+        appState.isModalOpen = false;
         document.body.classList.remove('modal-blur');
-        if (!state.focusedBody && state.controls) state.controls.enabled = true;
+        if (!appState.focusedBody && appState.controls) appState.controls.enabled = true;
     }, 300);
 }
 
@@ -289,17 +358,17 @@ export function createInfoModal(title, contentHTML, btnText = 'Entendi!') {
 
     requestAnimationFrame(() => overlay.classList.add('active'));
 
-    state.isInteractingWithUI = true;
-    state.isModalOpen = true;
+    appState.isInteractingWithUI = true;
+    appState.isModalOpen = true;
     document.body.classList.add('modal-blur');
     document.body.style.cursor = 'default';
 
-    if (state.hoveredBody && uiCallbacks.highlightBody) {
-        uiCallbacks.highlightBody(state.hoveredBody, false);
-        state.hoveredBody = null;
+    if (appState.hoveredBody && uiCallbacks.highlightBody) {
+        uiCallbacks.highlightBody(appState.hoveredBody, false);
+        appState.hoveredBody = null;
     }
 
-    if (state.controls) state.controls.enabled = false;
+    if (appState.controls) appState.controls.enabled = false;
 
     const closeBtn = document.getElementById('close-modal-btn');
     closeBtn.onclick = closeActiveModal;
@@ -365,8 +434,9 @@ export function showKeyboardShortcuts() {
                 <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">WASD / Setas</code> - Voar pelo espaço (Modo Fly)</li>
                 <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">Enter</code> - Confirmar / Selecionar Menu / Fechar Modal</li>
                 <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">Esc</code> - Abrir Menu / Voltar / Fechar Tudo</li>
-                <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">Space</code> - Parar Tudo / Girar Câmera</li>
-                <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">Z / X</code> - Zoom In / Out Direto</li>
+                <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">Space</code> - Pausar / Retomar o Tempo</li>
+                <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">Z / X</code> - Elevação da Câmera (Subir/Descer)</li>
+                <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">C / V</code> - Zoom da Câmera (Aproximar/Afastar)</li>
                 <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">I</code> - Abrir/Fechar Menu Rápido</li>
             </ul>
             <p style="margin: 15px 0 10px 0; border-bottom: 1px solid rgba(0,204,255,0.3); padding-bottom: 5px; color: #00ccff; font-weight: bold;">🎵 Áudio e Segredos</p>
@@ -411,27 +481,32 @@ export function showEasterToast(message = "Easter-egg encontrado") {
     }, 3000);
 }
 
+export function showEntropyMessage(isWarning = true) {
+    const msg = isWarning ? "⚠️ A entropia do sistema está aumentando drasticamente..." : "A entropia se estabilizou.";
+    showEasterToast(msg);
+}
+
 export function showEasterInfo(discoveredType = null) {
     if (discoveredType === 'pluto') {
-        state.eggsFound.pluto = true;
-        saveEggs();
+        appState.eggsFound.pluto = true;
+        saveEggs(appState.eggsFound);
         showEasterToast("Easter-egg de Plutão encontrado!");
         return;
     } else if (discoveredType === 'moon') {
-        state.eggsFound.moon = true;
-        saveEggs();
+        appState.eggsFound.moon = true;
+        saveEggs(appState.eggsFound);
         showEasterToast("Easter-egg da Lua encontrado!");
         return;
     } else if (discoveredType === 'fluminense') {
-        state.eggsFound.fluminense = true;
-        saveEggs();
+        appState.eggsFound.fluminense = true;
+        saveEggs(appState.eggsFound);
         showEasterToast("Fluminense encontrado!");
         return;
     }
 
     let title = '🥚 EASTER EGGS';
     let html = '';
-    const foundCount = (state.eggsFound.pluto ? 1 : 0) + (state.eggsFound.moon ? 1 : 0) + (state.eggsFound.fluminense ? 1 : 0);
+    const foundCount = (appState.eggsFound.pluto ? 1 : 0) + (appState.eggsFound.moon ? 1 : 0) + (appState.eggsFound.fluminense ? 1 : 0);
 
     if (foundCount === 0) {
         html = `
@@ -444,9 +519,9 @@ export function showEasterInfo(discoveredType = null) {
         html = `
             <div style="text-align: center;">
                 <div style="text-align: left; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; margin-top: 15px;">
-                    <p>${state.eggsFound.pluto ? '✅ <strong>Plutão:</strong> Descoberto!' : '❓ <strong>???:</strong> ???'}</p>
-                    <p>${state.eggsFound.moon ? '✅ <strong>Lua:</strong> Descoberto!' : '❓ <strong>???:</strong> ???'}</p>
-                    <p>${state.eggsFound.fluminense ? '✅ <strong>Fluminense:</strong> Descoberto!' : '❓ <strong>???:</strong> ???'}</p>
+                    <p>${appState.eggsFound.pluto ? '✅ <strong>Plutão:</strong> Descoberto!' : '❓ <strong>???:</strong> ???'}</p>
+                    <p>${appState.eggsFound.moon ? '✅ <strong>Lua:</strong> Descoberto!' : '❓ <strong>???:</strong> ???'}</p>
+                    <p>${appState.eggsFound.fluminense ? '✅ <strong>Fluminense:</strong> Descoberto!' : '❓ <strong>???:</strong> ???'}</p>
                 </div>
                 ${foundCount < 3 ? '<p style="margin-top: 20px; color: #ffcc00;">Ainda falta segredo por aí... 👀</p>' : '<p style="margin-top: 20px; color: #00ff88;">Você é um mestre explorador! 🎉</p>'}
             </div>
@@ -470,7 +545,7 @@ export function showEasterInfo(discoveredType = null) {
     }
 
     createInfoModal(title, html, btnText);
-    saveEggs();
+    saveEggs(appState.eggsFound);
 }
 
 export function showCredits() {
@@ -483,7 +558,23 @@ export function showCredits() {
 }
 
 export function updateInfoPanel(body) {
-    const data = body.data;
+    let data = body.data;
+
+    // [FIX] Override data for Sun phases (Red Giant)
+    if (body.type === 'sun' && appState.explosionPhase === 1) {
+        data = {
+            ...data,
+            name: "Gigante Vermelha",
+            info: {
+                ...data.info,
+                type: "Estrela (Fase Final)",
+                desc: "O Sol expandiu e está engolindo os planetas internos. A temperatura superficial diminuiu, mas o brilho aumentou drasticamente.",
+                age: "5+ Bi Anos",
+                translation: "Não se aplica"
+            }
+        };
+    }
+
     const infoName = document.getElementById('info-name');
     const infoAge = document.getElementById('info-age');
     const infoType = document.getElementById('info-type');
@@ -506,21 +597,21 @@ export function updateInfoPanel(body) {
     textContainer.style.marginBottom = '15px';
     infoDesc.appendChild(textContainer);
 
-    if (data.name === 'Sol' || (data.name === 'Gigante Vermelha' && state.explosionPhase === 1) || (data.name === 'Anã Branca' && state.explosionPhase === 3)) {
+    if (data.name === 'Sol' || (data.name === 'Gigante Vermelha' && appState.explosionPhase === 1) || (data.name === 'Anã Branca' && appState.explosionPhase === 3)) {
         const triggerBtn = document.createElement('button');
         triggerBtn.className = 'sun-trigger-btn';
 
-        if (state.explosionPhase === 0) {
+        if (appState.explosionPhase === 0) {
             triggerBtn.innerText = '⚠️ INICIAR SEQUÊNCIA FINAL';
             triggerBtn.onclick = () => {
                 if (uiCallbacks.startExplosion) uiCallbacks.startExplosion();
                 triggerBtn.remove();
             };
-        } else if (state.explosionPhase === 1) {
+        } else if (appState.explosionPhase === 1) {
             triggerBtn.innerText = '⏳ AGUARDANDO COLAPSO...';
             triggerBtn.style.opacity = '0.7';
             triggerBtn.disabled = true;
-        } else if (state.explosionPhase === 3) {
+        } else if (appState.explosionPhase === 3) {
             triggerBtn.innerText = '↺ RENASCER SISTEMA';
             triggerBtn.onclick = () => {
                 if (uiCallbacks.resetSolarSystem) uiCallbacks.resetSolarSystem();
@@ -529,6 +620,7 @@ export function updateInfoPanel(body) {
         }
         infoDesc.appendChild(triggerBtn);
     }
+
 
     let cheeseClicks = 0;
     infoDesc.onclick = (e) => {
@@ -540,12 +632,12 @@ export function updateInfoPanel(body) {
         if (category === 'moon') {
             cheeseClicks++;
             if (cheeseClicks >= 10) {
-                toggleMoonCheese(!state.isCheeseMode);
+                toggleMoonCheese(!appState.isCheeseMode);
                 cheeseClicks = 0;
             }
         } else {
             audioManager.playSecretAction(category);
-            if (category === 'pluto' && !state.eggsFound.pluto) {
+            if (category === 'pluto' && !appState.eggsFound.pluto) {
                 setTimeout(() => showEasterInfo('pluto'), 100);
             }
         }
@@ -556,16 +648,16 @@ export function updateInfoPanel(body) {
 }
 
 export function closeInfo() {
-    if (state.isCheeseMode) {
+    if (appState.isCheeseMode) {
         toggleMoonCheese(false);
     }
-    state.focusedBody = null;
-    state.isFlying = false;
-    state.isModalOpen = false;
-    if (state.controls) {
-        state.controls.enabled = true;
-        state.controls.enableKeys = true;
-        state.controls.enablePan = true;
+    appState.focusedBody = null;
+    appState.isFlying = false;
+    appState.isModalOpen = false;
+    if (appState.controls) {
+        appState.controls.enabled = true;
+        appState.controls.enableKeys = true;
+        appState.controls.enablePan = true;
     }
 
     const infoPanel = document.getElementById('info-panel');
@@ -585,13 +677,13 @@ export function toggleMoonCheese(enable) {
     const rotEl = document.getElementById('info-rotation');
 
     if (enable) {
-        let body = state.focusedBody;
+        let body = appState.focusedBody;
         if (!body || body.data.name !== 'Lua') {
-            body = state.celestialBodies.find(b => b.data && b.data.name === 'Lua');
+            body = appState.celestialBodies.find(b => b.data && b.data.name === 'Lua');
         }
         if (!body) return;
 
-        if (!state.isCheeseMode) {
+        if (!appState.isCheeseMode) {
             moonMeshRef = body.mesh;
             moonOriginalTexture = body.mesh.material.map;
             moonOriginalGeometry = body.mesh.geometry;
@@ -637,15 +729,15 @@ export function toggleMoonCheese(enable) {
             transEl.innerText = "0 dias (Degustação)";
             rotEl.innerText = "0 dias (Parado)";
 
-            state.isCheeseMode = true;
-            if (!state.eggsFound.moon) {
-                state.eggsFound.moon = true;
-                saveEggs();
+            appState.isCheeseMode = true;
+            if (!appState.eggsFound.moon) {
+                appState.eggsFound.moon = true;
+                saveEggs(appState.eggsFound);
                 showEasterInfo('moon');
             }
         }
     } else {
-        if (state.isCheeseMode) {
+        if (appState.isCheeseMode) {
             if (moonMeshRef && moonOriginalTexture && moonOriginalGeometry) {
                 moonMeshRef.geometry = moonOriginalGeometry;
                 moonMeshRef.rotation.set(0, 0, 0);
@@ -654,7 +746,7 @@ export function toggleMoonCheese(enable) {
                 moonMeshRef.material.needsUpdate = true;
             }
             if (originalInfo.desc) {
-                if (!state.focusedBody || state.focusedBody.data.name === 'Lua') {
+                if (!appState.focusedBody || appState.focusedBody.data.name === 'Lua') {
                     descEl.innerHTML = originalInfo.desc;
                     ageEl.innerText = originalInfo.age;
                     typeEl.innerText = originalInfo.type;
@@ -662,7 +754,7 @@ export function toggleMoonCheese(enable) {
                     rotEl.innerText = originalInfo.rot;
                 }
             }
-            state.isCheeseMode = false;
+            appState.isCheeseMode = false;
             moonOriginalTexture = null;
             moonOriginalGeometry = null;
             moonMeshRef = null;

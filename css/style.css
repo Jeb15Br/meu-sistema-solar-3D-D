@@ -343,6 +343,25 @@ body.modal-blur canvas {
     color: #e0e0e0;
     font-family: 'Exo 2', sans-serif;
     animation: modalSlideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+    /* Firefox Scrollbar Support */
+    scrollbar-width: thin;
+    scrollbar-color: #00ccff rgba(10, 20, 35, 0.95);
+}
+
+/* WebKit Scrollbar for consistency (if it was missing) */
+.info-modal::-webkit-scrollbar {
+    width: 8px;
+}
+
+.info-modal::-webkit-scrollbar-track {
+    background: rgba(10, 20, 35, 0.95);
+    border-radius: 4px;
+}
+
+.info-modal::-webkit-scrollbar-thumb {
+    background: #00ccff;
+    border-radius: 4px;
 }
 
 .info-modal h2 {
@@ -464,6 +483,36 @@ input[type=range]::-webkit-slider-thumb {
 }
 
 input[type=range]::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    background: #c084fc;
+}
+
+/* FIREFOX SUPPORT */
+input[type=range]::-moz-range-track {
+    width: 100%;
+    height: 6px;
+    cursor: pointer;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 3px;
+    transition: background 0.2s;
+}
+
+input[type=range]::-moz-range-thumb {
+    height: 16px;
+    width: 16px;
+    border-radius: 50%;
+    background: #a855f7;
+    cursor: pointer;
+    border: none;
+    /* Firefox adds a border by default sometimes */
+    margin-top: 0;
+    /* No margin needed for Firefox usually if centered */
+    box-shadow: 0 0 10px rgba(168, 85, 247, 0.5);
+    border: 2px solid white;
+    transition: transform 0.1s;
+}
+
+input[type=range]::-moz-range-thumb:hover {
     transform: scale(1.1);
     background: #c084fc;
 }

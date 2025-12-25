@@ -1,4 +1,4 @@
-import { state, saveEggs } from './GameState.js';
+import { state, saveEggs } from './GameState.js?v=2';
 
 // Centralize Audio Senses & Voice
 export const audioManager = {
@@ -21,11 +21,21 @@ export const audioManager = {
     resetPoolSize: 3,
 
     init: function () {
+        this.initSpecialAssets();
+        this.initResetSound();
+
+        // Tenta buscar elementos (DOM pode não estar pronto ainda)
         this.element = document.getElementById('bg-music');
         this.btn = document.getElementById('audio-btn');
-        if (!this.element || !this.btn) {
-            console.warn("Audio elements not found during init!");
-            return;
+
+        if (this.element) {
+            this.setupAudioListeners();
+        } else {
+            console.log("AudioManager: Audio element deferred (Lazy Load)");
+        }
+
+        if (this.btn) {
+            this.setupBtnListeners();
         }
 
         // Pre-load hover sounds pool
@@ -38,8 +48,6 @@ export const audioManager = {
         }
 
         this.discoverTracks();
-        this.initSpecialAssets();
-        this.initResetSound();
 
         this.element.loop = false;
         this.element.addEventListener('ended', () => this.nextTrack());
@@ -77,6 +85,8 @@ export const audioManager = {
 
         if (this.discoveryQueue.length === 0) {
             let sourceList = this.discoveryAssets;
+            if (!sourceList || sourceList.length === 0) return; // Safety check
+
             this.discoveryQueue = [...sourceList];
             for (let i = this.discoveryQueue.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -85,6 +95,8 @@ export const audioManager = {
         }
 
         const nextSound = this.discoveryQueue.pop();
+        if (!nextSound || !nextSound.audio) return;
+
         const soundToPlay = nextSound.audio.cloneNode();
         soundToPlay.volume = 1.0;
         this.activeSecretAudio = soundToPlay;
@@ -136,14 +148,55 @@ export const audioManager = {
         this.element.src = this.playlist[0];
     },
 
+    setupAudioListeners: function () {
+        if (!this.element) return;
+        this.element.loop = false;
+        // Evitar duplicar listeners
+        this.element.onended = () => this.nextTrack();
+        this.element.onerror = (e) => {
+            console.warn("Audio Error, skipping:", this.playlist[this.currentIndex]);
+            this.nextTrack();
+        };
+        if (!this.element.src) this.element.src = this.playlist[0];
+    },
+
+    setupBtnListeners: function () {
+        if (!this.btn) return;
+        this.btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.toggle();
+        };
+    },
+
+    tryLazyLoad: function () {
+        if (!this.element) {
+            this.element = document.getElementById('bg-music');
+            if (this.element) this.setupAudioListeners();
+        }
+        if (!this.btn) {
+            this.btn = document.getElementById('audio-btn');
+            if (this.btn) this.setupBtnListeners();
+        }
+        return !!this.element;
+    },
+
     toggle: function () {
+        // [LAZY LOAD] Se não achou antes, tenta achar agora
+        if (!this.element) {
+            if (!this.tryLazyLoad()) {
+                console.warn("AudioManager: Audio element still missing.");
+                return;
+            }
+        }
+
         if (this.element.paused) {
             this.element.play().then(() => {
-                this.btn.innerText = '🔇 Pausar';
+                if (this.btn) this.btn.innerText = '🔇 Pausar';
             }).catch(e => console.warn("Play failed:", e));
         } else {
             this.element.pause();
-            this.btn.innerText = '🔈 Música';
+            if (this.btn) this.btn.innerText = '🔈 Música';
         }
     },
 

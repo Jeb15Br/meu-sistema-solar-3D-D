@@ -4,7 +4,7 @@ export const solarSystemData = {
         radius: 10,
         color: 0xffaa00,
         emissive: 0xff4400,
-        info: { age: "4.6 Bi Anos", type: "Estrela", desc: "A estrela central do sistema solar. 99.86% da massa do sistema.", rotation: "27 dias", moons: "0" }
+        info: { age: "4.6 Bi Anos", type: "Estrela", desc: "A estrela central do sistema solar. 99.86% da massa do sistema.", translation: "230 Mi Anos", rotation: "27 dias", moons: "0" }
     },
     planets: [
         {
