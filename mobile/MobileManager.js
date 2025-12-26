@@ -13,6 +13,30 @@ export const MobileManager = {
         const isAndroid = /Android/i.test(ua);
         const isMobileDevice = isAndroid || isIOS || /webOS|BlackBerry|IEMobile|Opera Mini/i.test(ua);
 
+        // [UNIVERSAL FIX] Force-disable Context Menu/Selection on ALL Androids (Tablets/Phones/WebViews)
+        // This runs regardless of "isMobileDevice" outcome (handles "Desktop Site" mode on Android)
+        if (isAndroid || (navigator.maxTouchPoints > 0 && /Linux/i.test(navigator.platform))) {
+            console.log("🛡️ Applying Universal Android Protections");
+
+            // 1. Block Context Menu (Rights Click / Long Press)
+            const blockEvent = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            };
+
+            window.addEventListener('contextmenu', blockEvent, { capture: true, passive: false });
+            document.addEventListener('contextmenu', blockEvent, { capture: true, passive: false });
+
+            // 2. Block Selection Start (Old Android Browser/WebView quirk)
+            window.addEventListener('selectstart', blockEvent, { capture: true, passive: false });
+
+            // 3. Force CSS via JS
+            document.documentElement.style.webkitUserSelect = 'none';
+            document.documentElement.style.userSelect = 'none';
+            document.documentElement.style.webkitTouchCallout = 'none';
+        }
+
         if (isMobileDevice) {
             document.body.classList.add('is-mobile');
 
@@ -29,15 +53,6 @@ export const MobileManager = {
             this.setupResizeHandler();
             this.setupFullscreenHandler();
             this.setupMenuCloseHandler();
-
-            // [FIX] Prevent Android Context Menu (Long Press = Copy/Select)
-            // This fixes the issue where holding Earth triggers "Copy Screen" instead of Easter Egg
-            document.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }, { passive: false });
-
 
         } else {
             console.log("💻 Desktop Mode (Mobile layout disabled even if resized)");
