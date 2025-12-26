@@ -14,7 +14,7 @@ export const sceneManager = {
 
         // --- CAMERA ---
         state.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 50000);
-        state.camera.position.set(0, 300, 600);
+        state.camera.position.set(0, 200, 400); // [FIX] Closer initial view
 
         // --- RENDERER ---
         state.renderer = new THREE.WebGLRenderer({
@@ -53,7 +53,21 @@ export const sceneManager = {
         state.controls.zoomSpeed = 0.4;
 
         // --- POST-PROCESSING (BLOOM) ---
-        state.composer = new EffectComposer(state.renderer);
+        // [FIX] Use HalfFloatType for HDR Bloom support & prevent buffer mismatch errors
+        const renderTarget = new THREE.WebGLRenderTarget(
+            window.innerWidth,
+            window.innerHeight,
+            {
+                minFilter: THREE.LinearFilter,
+                magFilter: THREE.LinearFilter,
+                format: THREE.RGBAFormat,
+                type: THREE.HalfFloatType,
+                depthBuffer: true,
+                stencilBuffer: false
+            }
+        );
+
+        state.composer = new EffectComposer(state.renderer, renderTarget);
         const renderPass = new RenderPass(state.scene, state.camera);
         state.composer.addPass(renderPass);
 

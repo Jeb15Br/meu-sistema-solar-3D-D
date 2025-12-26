@@ -47,7 +47,7 @@ export const animationLoop = {
             // --- WATCHDOG (NaN check) ---
             if (appState.camera && (isNaN(appState.camera.position.x) || isNaN(appState.camera.position.y))) {
                 console.error("🔥 AnimationLoop: Camera NaN detected. Resetting.");
-                appState.camera.position.set(0, 300, 600);
+                appState.camera.position.set(0, 200, 400); // [FIX] Consistent with initial view
                 if (appState.controls) appState.controls.target.set(0, 0, 0);
             }
 

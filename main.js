@@ -10,6 +10,7 @@ import { sceneManager } from './modules/SceneManager.js?v=2';
 import { initSpaceFactory, createSystem, createStars, createAsteroidBelts, createFluminensePlanet } from './modules/SpaceFactory.js?v=2';
 import { initAnimationLoop } from './modules/AnimationLoop.js?v=2';
 import { simulationManager, initSimulation, updateSimulation } from './modules/SimulationManager.js?v=2';
+import { MobileManager } from './mobile/MobileManager.js?v=2';
 
 // --- INITIAL STATE ---
 state.eggsFound = loadEggs();
@@ -68,7 +69,8 @@ function initApp() {
     setupTimeControls();
     audioManager.init();
 
-    window.addEventListener('resize', () => simulationManager.handleWindowResize());
+    // [FIX] Mobile Management (Resize & Controls)
+    MobileManager.init();
 
     // Initial Checks
     // showChromeWarning(); // Disabled

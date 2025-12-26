@@ -3,6 +3,7 @@ import * as THREE from 'three';
 // import { state, saveEggs } from './GameState.js'; 
 import { saveEggs } from './GameState.js?v=2'; // Keep saveEggs helper
 import { audioManager } from './AudioManager.js?v=2';
+import { MobileManager } from '../mobile/MobileManager.js?v=2';
 
 let appState = null;
 let uiCallbacks = {};
@@ -22,9 +23,13 @@ export function setupMenu() {
             e.stopPropagation();
 
             if (uiInfoMenu.classList.contains('hidden')) {
+                // [FIX] Exclusive UI: Close planet panel if open to prevent overlap
+                if (!document.getElementById('info-panel').classList.contains('hidden')) {
+                    closeInfo();
+                }
+
                 uiInfoMenu.classList.remove('hidden');
                 appState.isInteractingWithUI = true;
-                // Note: selectedMenuItemIndex is in InputManager, we might want to reset it here if we had access
                 // For now, InputManager handles keyboard nav when isInteractingWithUI is true.
                 document.body.style.cursor = 'default';
 
@@ -385,24 +390,41 @@ export function createInfoModal(title, contentHTML, btnText = 'Entendi!') {
         const actionArea = document.getElementById('modal-action-area');
         if (actionArea) actionArea.style.opacity = '1';
     });
+
+    // [NEW] Close on outside click
+    overlay.onclick = (e) => {
+        if (e.target === overlay) {
+            closeActiveModal();
+        }
+    };
 }
 
 export function showAboutProject() {
+    const isMobile = window.innerWidth <= 1024;
+    const performanceMsg = isMobile
+        ? "⚠️ <b>Performance:</b> Se notar lentidão, verifique se o 'Modo de Economia de Energia' está ativado no seu celular, pois isso limita o desempenho gráfico."
+        : "⚠️ <b>Performance:</b> Se notar lentidão (ex: 30 FPS parado), verifique se o Edge está em \"Modo de Eficiência\" ou se a Aceleração de Hardware está ativada.";
+
     const html = `
         <p>Esse é um sistema solar que eu criei porque simplesmente deu vontade de criar, pois... é, eu simplesmente quis kkkkkkkkkkk</p>
         <p>Nele você poderá interagir com os nossos planetas, desde Mercúrio até o planeta-anão Plutão, poderá ver sobre a nossa Lua, o nosso Sol e até mesmo vê-lo se expandindo e se transformando na Gigante Vermelha.</p>
         <p>Em breve eu irei colocar novas funções, mecânicas, mais planetas e quem sabe expandir para o nível de poder ver as galáxias.</p>
         <p style="margin-top: 20px; font-size: 0.8em; color: #888; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 10px;">Data da última atualização: 24/12/2025</p>
         <p style="color: #666; font-size: 0.75em; padding-top: 5px;">
-            ⚠️ <b>Performance:</b> Se notar lentidão (ex: 30 FPS parado), verifique se o Edge está em 
-            "Modo de Eficiência" ou se a Aceleração de Hardware está ativada.
+            ${performanceMsg}
         </p>
     `;
     createInfoModal('📖 SOBRE O PROJETO', html);
 }
 
 export function showCameraInfo() {
-    const html = `
+    const isMobile = window.innerWidth <= 1024;
+    let html = '';
+
+    if (isMobile) {
+        html = MobileManager.getMobileControlsHTML();
+    } else {
+        html = `
         <p>A navegação no vácuo espacial exige habilidade, mas é simples:</p>
         <ul style="padding-left: 20px;">
             <li><strong>Órbita</strong>: Clique e arraste com o <strong>Botão Esquerdo</strong> para girar em torno do alvo.</li>
@@ -410,7 +432,8 @@ export function showCameraInfo() {
             <li><strong>Zoom</strong>: Use o <strong>Scroll</strong> do mouse para se aproximar ou afastar.</li>
             <li><strong>Focar</strong>: Clique em qualquer astro para centralizar a câmera nele automaticamente.</li>
         </ul>
-    `;
+        `;
+    }
     createInfoModal('📸 CONTROLE DE CÂMERA', html);
 }
 
@@ -427,7 +450,16 @@ export function showPlanetsInfo() {
 }
 
 export function showKeyboardShortcuts() {
-    const html = `
+    const isMobile = window.innerWidth <= 1024;
+
+    let html = '';
+    let title = '⌨️ ATALHOS DO TECLADO';
+
+    if (isMobile) {
+        title = '💡 DICAS RÁPIDAS';
+        html = MobileManager.getMobileTipsHTML();
+    } else {
+        html = `
         <div style="background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px;">
             <p style="margin-bottom: 15px; border-bottom: 1px solid rgba(0,204,255,0.3); padding-bottom: 5px; color: #00ccff; font-weight: bold;">🌌 Navegação e Geral</p>
             <ul style="list-style: none; padding-left: 0;">
@@ -446,8 +478,10 @@ export function showKeyboardShortcuts() {
                 <li><code style="background: #333; padding: 2px 6px; border-radius: 4px; color: #ffcc00;">DEL (Segurar 5s)</code> - Reset Nuclear de Segredos (Brutal!)</li>
             </ul>
         </div>
-    `;
-    createInfoModal('⌨️ ATALHOS DO TECLADO', html);
+        `;
+    }
+
+    createInfoModal(title, html);
 }
 
 export function showEasterToast(message = "Easter-egg encontrado") {
@@ -472,6 +506,20 @@ export function showEasterToast(message = "Easter-egg encontrado") {
         const bar = toast.querySelector('.toast-progress-bar');
         if (bar) bar.classList.add('animate');
     });
+
+    // [NEW] Swipe to Dismiss
+    let startY = 0;
+    toast.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    toast.addEventListener('touchmove', (e) => {
+        const dy = e.touches[0].clientY - startY;
+        if (dy > 20) {
+            toast.classList.remove('active');
+            setTimeout(() => { if (toast.parentNode) toast.remove(); }, 200);
+        }
+    }, { passive: true });
 
     setTimeout(() => {
         if (toast.parentNode) {
@@ -576,6 +624,21 @@ export function updateInfoPanel(body) {
     }
 
     const infoName = document.getElementById('info-name');
+
+    // [FIX] Exclusive UI: Hide menu if overlapping
+    const infoMenu = document.getElementById('info-menu');
+    if (infoMenu && !infoMenu.classList.contains('hidden')) {
+        infoMenu.classList.add('hidden');
+        // Restore controls/state as menu is closed, but panel is taking over so it's fine
+    }
+
+    // Hide info button when panel is open
+    const infoBtn = document.getElementById('info-btn');
+    if (infoBtn) {
+        // [RESTORED] Auto-hide ONLY for planet panel as requested
+        infoBtn.style.opacity = '0';
+        infoBtn.style.pointerEvents = 'none';
+    }
     const infoAge = document.getElementById('info-age');
     const infoType = document.getElementById('info-type');
     const infoTranslation = document.getElementById('info-translation');
@@ -654,6 +717,10 @@ export function closeInfo() {
     appState.focusedBody = null;
     appState.isFlying = false;
     appState.isModalOpen = false;
+
+    const infoBtn = document.getElementById('info-btn');
+    if (infoBtn) { infoBtn.style.opacity = '1'; infoBtn.style.pointerEvents = 'auto'; }
+
     if (appState.controls) {
         appState.controls.enabled = true;
         appState.controls.enableKeys = true;

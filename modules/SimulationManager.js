@@ -35,8 +35,22 @@ export const simulationManager = {
         appState = state;
     },
 
+    lastSimTime: 0,
+
     updateSimulation: function (delta, now) {
         if (!appState) return;
+
+        // Initialize lastSimTime
+        if (this.lastSimTime === 0) this.lastSimTime = now;
+
+        // Calculate REAL delta (unclamped) for rigorous time keeping
+        let realDelta = (now - this.lastSimTime) / 1000; // ms to seconds
+        this.lastSimTime = now;
+
+        // Sanity check: if jump is too huge (> 1 hour?), maybe reset or clamp lightly?
+        // But for "machine clock sync" we want it to catch up.
+        // If realDelta is negative or NaN (init), fallback
+        if (!realDelta || realDelta < 0) realDelta = delta;
 
         // 1. Date Update
         if (!appState.isTimePaused) {
@@ -46,9 +60,9 @@ export const simulationManager = {
                 // daysToAdvance logic
                 let daysToAdvance = 0;
                 if (appState.isRealTime) {
-                    daysToAdvance = delta / 86400;
+                    daysToAdvance = realDelta / 86400; // Use REAL time
                 } else {
-                    daysToAdvance = delta * appState.timeScale;
+                    daysToAdvance = realDelta * appState.timeScale; // Also scale purely by elapsed time
                 }
 
                 const nextDate = new Date(appState.currentDate);
@@ -409,7 +423,7 @@ export const simulationManager = {
             sun.mesh.scale.set(1, 1, 1);
             sun.mesh.visible = true;
             sun.mesh.material.emissive.setHex(0xffaa00);
-            sun.mesh.material.emissiveIntensity = 2;
+            sun.mesh.material.emissiveIntensity = 3.0; // [FIX] Increased to ensure Bloom
             sun.mesh.material.transparent = false;
             sun.mesh.material.opacity = 1;
             sun.mesh.material.needsUpdate = true;
@@ -426,7 +440,7 @@ export const simulationManager = {
         }
 
         appState.sunLight.color.setHex(0xffffff);
-        appState.sunLight.intensity = 1.5;
+        appState.sunLight.intensity = 2.0; // [FIX] Restore original intensity
 
         appState.celestialBodies.forEach(body => {
             if (body.type === 'planet' || body.type === 'dwarf' || body.type === 'moon') {

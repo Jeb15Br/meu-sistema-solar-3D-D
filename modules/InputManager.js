@@ -3,6 +3,7 @@ import * as THREE from 'three';
 // import { state, saveEggs } from './GameState.js';
 import { saveEggs } from './GameState.js?v=2'; // Keep saveEggs helper
 import { audioManager } from './AudioManager.js?v=2';
+import { MobileManager } from '../mobile/MobileManager.js?v=2';
 
 let appState = null;
 
@@ -31,11 +32,241 @@ export function initInput(state, callbacks) {
 function setupInputListeners() {
     window.addEventListener('keydown', handleGlobalKeyDown, { capture: true });
     window.addEventListener('keyup', handleGlobalKeyUp, { capture: true });
+    window.addEventListener('mousedown', onMouseDown); // Track drag start
     window.addEventListener('mousemove', onMouseMove);
     window.addEventListener('click', onMouseClick);
     window.addEventListener('contextmenu', onRightClick, { capture: true });
+
+    // --- MOBILE TOUCH LISTENERS ---
+    window.addEventListener('touchstart', onTouchStart, { passive: false });
+    window.addEventListener('touchend', onTouchEnd);
+    window.addEventListener('touchmove', onTouchMove, { passive: false });
 }
 
+// --- LONG PRESS STATE ---
+let longPressTimer = null;
+let longPressTarget = null;
+let touchStartPos = new THREE.Vector2();
+const LONG_PRESS_DURATION_EARTH = 3000; // 3s for Fluminense (optimizing for access)
+const LONG_PRESS_DURATION_RESET = 3000;  // 3s for Reset (Info Button)
+
+function onTouchStart(event) {
+    if (event.touches.length !== 1) return; // Only single touch
+
+    const touch = event.touches[0];
+    touchStartPos.set(touch.clientX, touch.clientY);
+
+    // [FIX] Store for Drag Detection (Safari/Mobile)
+    inputState.touchStartX = touch.clientX;
+    inputState.touchStartY = touch.clientY;
+    inputState.lastTouchTime = Date.now();
+
+    // Check Info Button (Reset)
+    const infoBtn = document.getElementById('info-btn');
+    if (infoBtn && infoBtn.contains(event.target)) {
+        startLongPress('reset', LONG_PRESS_DURATION_RESET);
+        return;
+    }
+
+    // Check Earth (Fluminense) - Raycast
+    if (!appState.isInteractingWithUI) {
+        inputState.mouse.x = (touch.clientX / window.innerWidth) * 2 - 1;
+        inputState.mouse.y = -(touch.clientY / window.innerHeight) * 2 + 1;
+        inputState.raycaster.setFromCamera(inputState.mouse, appState.camera);
+
+        const meshes = appState.celestialBodies.map(b => b.mesh).filter(m => m && m.visible);
+        const intersects = inputState.raycaster.intersectObjects(meshes);
+
+        if (intersects.length > 0) {
+            const hitObj = intersects[0].object;
+            const body = appState.celestialBodies.find(b => b.mesh === hitObj);
+            if (body && body.data.name === 'Terra') {
+                startLongPress('earth', LONG_PRESS_DURATION_EARTH);
+            }
+        }
+    }
+}
+
+function onTouchMove(event) {
+    if (!longPressTimer) return;
+    const touch = event.touches[0];
+    const dx = touch.clientX - touchStartPos.x;
+    const dy = touch.clientY - touchStartPos.y;
+    // If moved more than 10px, cancel
+    if (Math.hypot(dx, dy) > 10) {
+        cancelLongPress();
+    }
+}
+
+function onTouchEnd(event) {
+    if (inputState.longPressTriggered) {
+        event.preventDefault(); // Stop MouseClick generation
+        inputState.longPressTriggered = false;
+    }
+    cancelLongPress();
+}
+
+function startLongPress(type, duration) {
+    cancelLongPress(); // Safety
+    longPressTarget = type;
+
+    // Toast feedback with active countdown
+    if (type === 'reset') {
+        triggerResetToast(true);
+        let secondsLeft = Math.ceil(duration / 1000);
+
+        // Immediate update
+        if (inputState.eggResetToast) inputState.eggResetToast.innerHTML = `🔥 Mantenha pressionado... (${secondsLeft}s)`;
+
+        // Interval for countdown
+        inputState.longPressInterval = setInterval(() => {
+            secondsLeft--;
+            if (secondsLeft > 0) {
+                if (inputState.eggResetToast) inputState.eggResetToast.innerHTML = `🔥 Mantenha pressionado... (${secondsLeft}s)`;
+            } else {
+                // Time's up!
+                clearInterval(inputState.longPressInterval);
+                inputState.longPressInterval = null;
+                executeLongPressAction();
+            }
+        }, 1000);
+    } else {
+        // Normal timeout for non-visual feedbacks (like Earth/Fluminense if needed, but 3s is short)
+        // Actually, let's keep the timeout logic simple for non-reset or use the same interval?
+        // For Earth, we don't show a toast usually.
+        longPressTimer = setTimeout(() => {
+            executeLongPressAction();
+        }, duration);
+    }
+}
+
+function cancelLongPress() {
+    if (longPressTimer) {
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+    }
+    if (inputState.longPressInterval) {
+        clearInterval(inputState.longPressInterval);
+        inputState.longPressInterval = null;
+    }
+
+    if (longPressTarget === 'reset') {
+        triggerResetToast(false); // Stop countdown/remove toast
+    }
+    longPressTarget = null;
+}
+
+function executeLongPressAction() {
+    if (longPressTarget === 'earth') {
+        // Invoke Fluminense
+        console.log("⚽ TOQUE LONGO NA TERRA: FLUMINENSE!");
+        // Simulate typing "fluminense" logic
+        if (appState.celestialBodies.some(b => b.isEasterEgg && b.data.name === "Planeta Fluminense")) return;
+
+        if (appState.isModalOpen && uiCallbacks.closeActiveModal) uiCallbacks.closeActiveModal();
+        appState.isInteractingWithUI = false;
+
+        if (uiCallbacks.createFluminensePlanet) uiCallbacks.createFluminensePlanet();
+
+        // [FIX] Block clicks for 1s using timestamp (Ghost Click Prevention)
+        inputState.nextClickBlockTime = Date.now() + 1000;
+
+        if (!appState.eggsFound.fluminense) {
+            audioManager.playSecretAction('fluminense', uiCallbacks.showEasterToast);
+        } else if (audioManager.playHover) {
+            audioManager.playHover();
+        }
+
+        // [FIX] Use standard focusOnPlanet to ensure tracking works (Chase Mode)
+        setTimeout(() => {
+            const flu = appState.celestialBodies.find(b => b.data.name === 'Planeta Fluminense');
+            if (flu && flu.mesh) {
+                focusOnPlanet(flu);
+                if (uiCallbacks.updateInfoPanel) uiCallbacks.updateInfoPanel(flu);
+                const infoPanel = document.getElementById('info-panel');
+                if (infoPanel) infoPanel.classList.remove('hidden');
+            }
+        }, 100); // Small delay to ensure creation
+
+    } else if (longPressTarget === 'reset') {
+        // Execute Reset
+        executeResetAction();
+    }
+    longPressTimer = null;
+    longPressTarget = null;
+}
+
+// Reuse/Refactor Reset Logic
+function triggerResetToast(show) {
+    if (show) {
+        if (!inputState.eggResetTimer) {
+            inputState.eggResetToast = document.createElement('div');
+            inputState.eggResetToast.style.cssText = `
+                position: fixed; top: 20px; right: 20px; background: rgba(255, 50, 50, 0.9);
+                color: white; padding: 15px 25px; border-radius: 10px; border: 2px solid white;
+                font-family: 'Exo 2', sans-serif; font-weight: bold; z-index: 12000;
+                box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center;
+            `;
+            inputState.eggResetToast.innerHTML = '🔥 Mantenha pressionado... (3s)';
+            document.body.appendChild(inputState.eggResetToast);
+
+            // We use the boolean to start, but the text update happens via a separate interval in the key handler.
+            // Here we just static text or simple visual, as strict seconds update requires interval inside here.
+            // Let's mimic the key handler logic but managed by our timeout duration.
+        }
+    } else {
+        if (inputState.eggResetToast) {
+            inputState.eggResetToast.remove();
+            inputState.eggResetToast = null;
+        }
+    }
+}
+
+function executeResetAction() {
+    appState.eggsFound = { pluto: false, moon: false, fluminense: false };
+    saveEggs(appState.eggsFound);
+    if (audioManager.playResetSound) audioManager.playResetSound();
+
+    // Feedback
+    if (!inputState.eggResetToast) {
+        inputState.eggResetToast = document.createElement('div');
+        inputState.eggResetToast.style.cssText = `
+                position: fixed; top: 20px; right: 20px; background: rgba(0, 255, 100, 0.9);
+                color: white; padding: 15px 25px; border-radius: 10px; border: 2px solid white;
+                font-family: 'Exo 2', sans-serif; font-weight: bold; z-index: 12000;
+                box-shadow: 0 0 20px rgba(0,0,0,0.5); text-align: center;
+            `;
+        document.body.appendChild(inputState.eggResetToast);
+    }
+    inputState.eggResetToast.style.background = 'rgba(0, 255, 100, 0.9)';
+    inputState.eggResetToast.innerHTML = '✨ Segredos resetados com sucesso!';
+    const toast = inputState.eggResetToast;
+
+    // [FIX] Auto-dismiss after 1s
+    setTimeout(() => {
+        if (toast) toast.remove();
+        if (inputState.eggResetToast === toast) inputState.eggResetToast = null;
+    }, 1000);
+
+    // [NEW] Swipe to Dismiss (Slide Down)
+    let startY = 0;
+    toast.addEventListener('touchstart', (e) => {
+        startY = e.touches[0].clientY;
+    }, { passive: true });
+
+    toast.addEventListener('touchmove', (e) => {
+        const dy = e.touches[0].clientY - startY;
+        if (dy > 20) { // Swipe Down
+            toast.style.transition = 'opacity 0.2s, transform 0.2s';
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                if (toast) toast.remove();
+                if (inputState.eggResetToast === toast) inputState.eggResetToast = null;
+            }, 200);
+        }
+    }, { passive: true });
+}
 function handleBackAction() {
     // 1. Modal Overlay
     if (appState.isModalOpen) {
@@ -122,6 +353,18 @@ function handleGlobalKeyDown(e) {
             } else if (audioManager.playHover) {
                 audioManager.playHover();
             }
+
+            // [FIX] Use standard focusOnPlanet to ensure tracking works (Chase Mode)
+            setTimeout(() => {
+                const flu = appState.celestialBodies.find(b => b.data.name === 'Planeta Fluminense');
+                if (flu && flu.mesh) {
+                    focusOnPlanet(flu);
+                    // Open Info Panel explicitly just in case focus didn't toggle it yet (though it should)
+                    if (uiCallbacks.updateInfoPanel) uiCallbacks.updateInfoPanel(flu);
+                    const infoPanel = document.getElementById('info-panel');
+                    if (infoPanel) infoPanel.classList.remove('hidden');
+                }
+            }, 100);
 
             inputState.typedBuffer = "";
             inputState.isTypingLocked = false;
@@ -241,7 +484,12 @@ function handleGlobalKeyDown(e) {
                     if (audioManager.playResetSound) audioManager.playResetSound();
                     inputState.eggResetToast.style.background = 'rgba(0, 255, 100, 0.9)';
                     inputState.eggResetToast.innerHTML = '✨ Segredos resetados com sucesso!';
-                    setTimeout(() => { if (inputState.eggResetToast) inputState.eggResetToast.remove(); inputState.eggResetToast = null; }, 2000);
+                    const toast = inputState.eggResetToast;
+                    setTimeout(() => {
+                        if (toast) toast.remove();
+                        // Only clear state if it still matches (avoid clearing a NEW toast)
+                        if (inputState.eggResetToast === toast) inputState.eggResetToast = null;
+                    }, 1000);
                 }
             }, 1000);
         }
@@ -261,6 +509,12 @@ function handleGlobalKeyUp(e) {
 }
 
 // --- MOUSE LOGIC ---
+function onMouseDown(event) {
+    if (appState.isInteractingWithUI) return;
+    inputState.dragStartX = event.clientX;
+    inputState.dragStartY = event.clientY;
+}
+
 function onMouseMove(event) {
     if (appState.isInteractingWithUI) return;
     if (inputState.isHoveringLabel) return;
@@ -323,6 +577,69 @@ function onMouseMove(event) {
 
 function onMouseClick(event) {
     if (appState.isInteractingWithUI) return;
+    if (inputState.nextClickBlockTime && Date.now() < inputState.nextClickBlockTime) {
+        return;
+    }
+
+    // [FIX] Drag Detection Logic (Hybrid Touch/Mouse)
+    let startX = inputState.dragStartX || event.clientX;
+    let startY = inputState.dragStartY || event.clientY;
+
+    // If interact was a touch (recent), use the original TouchStart position
+    // This is critical because on mobile, mousedown fires at the END of the drag (synthetic), which defeats the purpose.
+    if (inputState.lastTouchTime && (Date.now() - inputState.lastTouchTime < 1000)) {
+        startX = inputState.touchStartX;
+        startY = inputState.touchStartY;
+    }
+
+    const dragDist = Math.hypot(event.clientX - startX, event.clientY - startY);
+    if (dragDist > 20) return; // If moved more than 20px (from verified start), it's a drag
+
+    // Check if we are clicking on the Info Panel itself (redundant if stopped propagation, but safe)
+    const infoPanel = document.getElementById('info-panel');
+    const infoMenu = document.getElementById('info-menu');
+
+    // Logic for Info Panel (Planet Info)
+    if (infoPanel && !infoPanel.classList.contains('hidden')) {
+        const rect = infoPanel.getBoundingClientRect();
+        const clickedOnPanel = (
+            event.clientX >= rect.left && event.clientX <= rect.right &&
+            event.clientY >= rect.top && event.clientY <= rect.bottom
+        );
+
+        // [FIX] User requested "only right button" for PC, but "click elsewhere" needed for Mobile.
+        // Solution: Enable click-to-close ONLY on mobile (Logic moved to MobileManager as requested)
+        if (!clickedOnPanel && MobileManager.shouldCloseOnBackgroundClick()) {
+            if (uiCallbacks.closeInfo) uiCallbacks.closeInfo();
+        }
+    }
+
+    // Logic for Info Menu (Main Menu) - [FIX] Close if clicking outside
+    if (infoMenu && !infoMenu.classList.contains('hidden')) {
+        const rect = infoMenu.getBoundingClientRect();
+        const clickedOnMenu = (
+            event.clientX >= rect.left && event.clientX <= rect.right &&
+            event.clientY >= rect.top && event.clientY <= rect.bottom
+        );
+
+        // Also check if we clicked the toggle button itself (handled by its own listener, but prevents double toggle)
+        const btn = document.getElementById('info-btn');
+        const clickedOnBtn = btn && btn.contains(event.target);
+
+        if (!clickedOnMenu && !clickedOnBtn) {
+            // Close the menu manually or via callback?
+            // Since setupMenu handles the toggle, we can just hide it and update state
+            infoMenu.classList.add('hidden');
+            appState.isInteractingWithUI = false;
+            if (appState.controls) {
+                appState.controls.enabled = true;
+                appState.controls.enableKeys = true;
+            }
+            // Restore button visibility
+            if (btn) { btn.style.opacity = '1'; btn.style.pointerEvents = 'auto'; }
+        }
+    }
+
     if (appState.hoveredBody) {
         if (!appState.hoveredBody.data || !appState.hoveredBody.mesh) return;
         if (!appState.hoveredBody.mesh.visible) return;
@@ -458,7 +775,7 @@ export function highlightBody(body, active) {
                 body.mesh.material.emissive.setHex(0xffffff);
                 body.mesh.material.emissiveIntensity = 4.0;
             } else {
-                body.mesh.material.emissiveIntensity = 2.5;
+                body.mesh.material.emissiveIntensity = 3.0;
                 body.mesh.material.emissive.setHex(appState.explosionActive ? 0xff4400 : 0xffaa00);
             }
         } else {

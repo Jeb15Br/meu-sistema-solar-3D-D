@@ -397,8 +397,34 @@ function createPlanet(data) {
                 speed: moonData.speed,
                 originalDistance: moonData.distance,
                 originalSpeed: moonData.speed,
-                data: moonData
+                data: moonData,
+                label: null // Will be populated below if we decide to add one
             });
+
+            // [NEW] Add Label for Moons (ONLY FOR 'Lua' as requested)
+            if (moonData.name === 'Lua') {
+                const moonLabelDiv = document.createElement('div');
+                moonLabelDiv.className = 'label-container moon-label';
+
+                const moonLabelText = document.createElement('div');
+                moonLabelText.className = 'label-text';
+                moonLabelText.innerText = moonData.name;
+                moonLabelText.style.fontSize = '0.7em';
+                moonLabelText.style.color = '#aaaaaa';
+                moonLabelDiv.appendChild(moonLabelText);
+
+                const moonLabel = new CSS2DObject(moonLabelDiv);
+                moonLabel.position.set(0, moonData.radius * 2.5, 0);
+                moonMesh.add(moonLabel);
+
+                // Link label to the last added body
+                const moonBody = appState.celestialBodies[appState.celestialBodies.length - 1];
+                moonBody.label = moonLabel;
+
+                setupLabelInteraction(moonLabelDiv, moonBody);
+            }
+
+
         });
     }
 

@@ -161,12 +161,22 @@ export const audioManager = {
     },
 
     setupBtnListeners: function () {
-        if (!this.btn) return;
-        this.btn.onclick = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.toggle();
-        };
+        if (this.btn) {
+            this.btn.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.toggle();
+            };
+        }
+
+        const prevBtn = document.getElementById('prev-track');
+        if (prevBtn) {
+            prevBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); this.prevTrack(); };
+        }
+        const nextBtn = document.getElementById('next-track');
+        if (nextBtn) {
+            nextBtn.onclick = (e) => { e.preventDefault(); e.stopPropagation(); this.nextTrack(); };
+        }
     },
 
     tryLazyLoad: function () {
@@ -176,7 +186,7 @@ export const audioManager = {
         }
         if (!this.btn) {
             this.btn = document.getElementById('audio-btn');
-            if (this.btn) this.setupBtnListeners();
+            this.setupBtnListeners(); // Re-run to catch all buttons
         }
         return !!this.element;
     },
@@ -190,13 +200,17 @@ export const audioManager = {
             }
         }
 
+        const navBtns = document.querySelectorAll('.music-nav-btn');
+
         if (this.element.paused) {
             this.element.play().then(() => {
                 if (this.btn) this.btn.innerText = '🔇 Pausar';
+                navBtns.forEach(b => b.classList.add('visible-nav'));
             }).catch(e => console.warn("Play failed:", e));
         } else {
             this.element.pause();
             if (this.btn) this.btn.innerText = '🔈 Música';
+            navBtns.forEach(b => b.classList.remove('visible-nav'));
         }
     },
 
@@ -218,10 +232,10 @@ export const audioManager = {
         const toast = document.createElement('div');
         toast.id = 'music-toast';
         toast.style.cssText = `
-            position: fixed; bottom: 80px; left: 20px; background: rgba(0, 20, 40, 0.82);
-            color: #00ccff; padding: 12px 25px; border-radius: 8px; border: 1px solid #00ccff;
-            font-family: 'Exo 2', sans-serif; z-index: 20000; pointer-events: none;
-            box-shadow: 0 0 20px rgba(0, 204, 255, 0.2); transition: opacity 0.8s ease-out;
+            position: fixed; top: 110px; left: 20px; background: rgba(0, 20, 40, 0.82);
+            color: #00ccff; padding: 8px 16px; border-radius: 8px; border: 1px solid #00ccff;
+            font-family: 'Exo 2', sans-serif; font-size: 0.9rem; z-index: 20000; pointer-events: none;
+            box-shadow: 0 0 15px rgba(0, 204, 255, 0.2); transition: opacity 0.8s ease-out;
             opacity: 0;
         `;
         toast.innerText = '♪ Tocando: ' + songName;

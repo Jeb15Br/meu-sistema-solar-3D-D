@@ -3,9 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>3D Solar System</title>
     <link rel="stylesheet" href="css/style.css?v=FORCE_UPDATE_FINAL_13">
+    <link rel="stylesheet" href="mobile/mobile.css?v=MCPE_HUD_1">
+    <link rel="preload" href="assets/VirarTelefone.gif" as="image">
     <script type="importmap">
         {
             "imports": {
@@ -14,6 +17,16 @@
             }
         }
     </script>
+    <!-- PWA / Fullscreen Mobile Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#000000">
+
+    <!-- App Icons -->
+    <link rel="icon" type="image/jpeg" href="assets/app_icon.jpg">
+    <link rel="apple-touch-icon" href="assets/app_icon.jpg">
+    <link rel="manifest" href="manifest.json">
+
     <!-- RPOD: Red Panel of Death (Global Error Handler) -->
     <script src="scripts/rpod.js"></script>
 </head>
@@ -26,7 +39,6 @@
                 <input type="range" id="timeSlider" min="-130" max="130" step="1" value="0">
                 <div class="speed-row">
                     <div id="time-display">Velocidade: Tempo Real</div>
-                    <button id="real-time-btn" title="Reiniciar para Agora">Tempo Real</button>
                 </div>
             </div>
             <div class="date-group">
@@ -34,6 +46,7 @@
                 <div class="time-controls-row">
                     <button id="pause-time-btn">Pausar Tempo</button>
                     <button id="reset-date-btn">Hoje</button>
+                    <button id="real-time-btn" title="Reiniciar para Agora">Tempo Real</button>
                 </div>
             </div>
         </div>
@@ -53,6 +66,15 @@
         <p id="info-desc">Descrição...</p>
     </div>
 
+    <!-- ORIENTATION LOCK OVERLAY -->
+    <div id="orientation-lock">
+        <div class="lock-content">
+            <img src="assets/VirarTelefone.gif" alt="Vire o telefone" class="rotate-gif">
+            <h2>Por favor, vire o seu telefone</h2>
+            <p>A experiência é melhor na horizontal!</p>
+        </div>
+    </div>
+
     <!-- Audio -->
     <audio id="bg-music">
         <!-- Coloque seu arquivo 'music.mp3' na pasta 'assets' -->
@@ -61,7 +83,13 @@
         <source src="https://assets.mixkit.co/music/preview/mixkit-stars-in-space-605.mp3" type="audio/mp3">
         Your browser does not support the audio element.
     </audio>
-    <button id="audio-btn">🔈 Música</button>
+    <div id="music-controls-container">
+        <button id="audio-btn">🔈 Música</button>
+        <div id="music-nav-row">
+            <button id="prev-track" class="music-nav-btn" title="Anterior">⏮</button>
+            <button id="next-track" class="music-nav-btn" title="Próxima">⏭</button>
+        </div>
+    </div>
     <div id="info-menu" class="hidden">
         <div class="info-menu-item" id="menu-about">📖 Sobre o Projeto</div>
         <div class="info-menu-item" id="menu-camera">📸 Controle de Câmera</div>
@@ -71,6 +99,28 @@
         <div class="info-menu-item" id="menu-credits">💎 Créditos</div>
     </div>
     <button id="info-btn" title="Controles e Ajuda">ℹ️</button>
+
+    <!-- MOBILE CONTROLS OVERLAY (Minecraft PE Style) -->
+    <div id="mobile-controls" class="hidden">
+        <div id="d-pad">
+            <div class="d-row">
+                <button id="btn-forward" class="control-btn" data-key="KeyW">▲</button>
+            </div>
+            <div class="d-row">
+                <button id="btn-left" class="control-btn" data-key="KeyA">◄</button>
+                <div class="d-spacer"></div>
+                <button id="btn-right" class="control-btn" data-key="KeyD">►</button>
+            </div>
+            <div class="d-row">
+                <button id="btn-backward" class="control-btn" data-key="KeyS">▼</button>
+            </div>
+        </div>
+
+        <div id="action-buttons">
+            <button id="btn-up" class="control-btn action-btn" data-key="KeyZ">⬆</button>
+            <button id="btn-down" class="control-btn action-btn" data-key="KeyX">⬇</button>
+        </div>
+    </div>
 
     <script type="module" src="main.js?v=FORCE_UPDATE_FINAL_1"></script>
 </body>

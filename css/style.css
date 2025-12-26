@@ -2,12 +2,20 @@ html,
 body {
     margin: 0;
     padding: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
+    min-height: 100vh;
+    /* Force full height even with address bar quirks */
     overflow: hidden;
-    background-color: #000;
+    background-color: #000000 !important;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: white;
+    /* Fix for Samsung Internet / notch issues */
+    -webkit-text-size-adjust: 100%;
+    position: fixed;
+    /* Often fixes bounce/scroll on iOS */
+    top: 0;
+    left: 0;
 }
 
 .scene-layer {
@@ -83,24 +91,73 @@ body.modal-blur canvas {
     z-index: 12000;
 }
 
-#audio-btn {
+#music-controls-container {
     position: absolute;
     top: 20px;
     left: 20px;
+    z-index: 15000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    /* Center buttons relative to each other */
+    gap: 10px;
+}
+
+#music-nav-row {
+    display: none;
+    /* Hidden by default (PC), shown in mobile.css */
+    gap: 15px;
+    justify-content: center;
+}
+
+#audio-btn {
+    /* Position reset: handled by container */
+    position: static;
     background: rgba(255, 255, 255, 0.1);
     color: white;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    padding: 5px 15px;
+    padding: 8px 15px;
+    /* Slightly taller for alignment */
     border-radius: 12px;
     cursor: pointer;
-    z-index: 15000;
     font-family: 'Exo 2', sans-serif;
     font-weight: bold;
     display: flex;
     align-items: center;
-    gap: 12px;
-    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
 }
+
+.music-nav-btn {
+    background: rgba(0, 0, 0, 0.5);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1em;
+    transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+
+    /* Initial State: Hidden */
+    opacity: 0;
+    pointer-events: none;
+    transform: scale(0.8) translateY(10px);
+}
+
+.music-nav-btn.visible-nav {
+    opacity: 1;
+    pointer-events: auto;
+    transform: scale(1) translateY(0);
+}
+
+.music-nav-btn:hover {
+    background: rgba(0, 204, 255, 0.3);
+    border-color: rgba(0, 204, 255, 0.5);
+}
+
 
 .label-container {
     display: flex;

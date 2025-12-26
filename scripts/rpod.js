@@ -88,12 +88,42 @@ window.RPOD = {
 
             document.getElementById('btn-copy-all').onclick = () => {
                 const allErrors = (window.rpodErrors || []).join('\n\n========================================\n\n');
-                navigator.clipboard.writeText(allErrors).then(() => {
-                    const btn = document.getElementById('btn-copy-all');
-                    const originalText = btn.innerText;
-                    btn.innerText = "✅ COPIADO!";
-                    setTimeout(() => btn.innerText = originalText, 2000);
-                });
+
+                // Fallback for Non-Secure Contexts (HTTP IP)
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(allErrors).then(() => {
+                        const btn = document.getElementById('btn-copy-all');
+                        const originalText = btn.innerText;
+                        btn.innerText = "✅ COPIADO!";
+                        setTimeout(() => btn.innerText = originalText, 2000);
+                    }).catch(err => {
+                        console.warn("Clipboard API failed:", err);
+                        fallbackCopy(allErrors);
+                    });
+                } else {
+                    fallbackCopy(allErrors);
+                }
+
+                function fallbackCopy(text) {
+                    const textArea = document.createElement("textarea");
+                    textArea.value = text;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        const btn = document.getElementById('btn-copy-all');
+                        const originalText = btn.innerText;
+                        btn.innerText = "✅ COPIADO!";
+                        setTimeout(() => btn.innerText = originalText, 2000);
+                    } catch (err) {
+                        console.error('Fallback copy failed', err);
+                        alert("Não foi possível copiar automaticamente (Bloqueio do Navegador).");
+                    }
+                    document.body.removeChild(textArea);
+                }
             };
         }
 
@@ -151,10 +181,30 @@ window.RPOD = {
             card.querySelector('.btn-copy-single').onclick = function () {
                 const count = window.RPOD.activeErrors[errorKey] ? window.RPOD.activeErrors[errorKey].count : 1;
                 const textToCopy = `[${timestamp}] ERRO: ${msg} (${count}x)\nSTACK: ${stack}`;
-                navigator.clipboard.writeText(textToCopy).then(() => {
-                    this.innerText = "✅";
-                    setTimeout(() => this.innerText = "📋 Copiar", 1500);
-                });
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(textToCopy).then(() => {
+                        this.innerText = "✅";
+                        setTimeout(() => this.innerText = "📋 Copiar", 1500);
+                    });
+                } else {
+                    // Fallback Inline
+                    const textArea = document.createElement("textarea");
+                    textArea.value = textToCopy;
+                    textArea.style.position = "fixed";
+                    textArea.style.left = "-9999px";
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        this.innerText = "✅";
+                        setTimeout(() => this.innerText = "📋 Copiar", 1500);
+                    } catch (err) {
+                        console.error('Fallback copy failed', err);
+                    }
+                    document.body.removeChild(textArea);
+                }
             };
 
             document.getElementById('rpod-cards-area').appendChild(card);

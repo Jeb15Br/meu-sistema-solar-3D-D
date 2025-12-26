@@ -1,0 +1,21 @@
+{
+    "name": "3D Solar System",
+    "short_name": "SolarSystem",
+    "start_url": ".",
+    "display": "fullscreen",
+    "background_color": "#000000",
+    "theme_color": "#000000",
+    "orientation": "landscape",
+    "icons": [
+        {
+            "src": "assets/app_icon.jpg",
+            "sizes": "192x192",
+            "type": "image/jpeg"
+        },
+        {
+            "src": "assets/app_icon.jpg",
+            "sizes": "512x512",
+            "type": "image/jpeg"
+        }
+    ]
+}

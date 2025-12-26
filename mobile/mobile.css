@@ -1,0 +1,637 @@
+/* --- MOBILE CONTROLS (MCPE Style) --- */
+/* Trigger only if JS detected a mobile device (User Agent) */
+body.is-mobile {
+
+    /* [FIX] Disable native selection/copy menu on mobile */
+    * {
+        -webkit-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+        -webkit-tap-highlight-color: transparent !important;
+    }
+
+    input,
+    textarea {
+        -webkit-user-select: auto !important;
+        user-select: auto !important;
+    }
+
+    #mobile-controls {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: flex-end;
+        position: fixed;
+        bottom: calc(15px + env(safe-area-inset-bottom, 20px));
+        left: 2px;
+        /* Hug edge */
+        right: 2px;
+        /* Hug edge */
+        z-index: 18000;
+        pointer-events: none;
+        touch-action: none !important;
+        /* Prevent zoom/pan on container area */
+    }
+
+    #mobile-controls>div {
+        pointer-events: auto;
+        touch-action: none !important;
+        /* Prevent zoom on buttons */
+    }
+
+    #d-pad {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        margin-bottom: 5px;
+        margin-left: 2px;
+        /* Ensure visual balance */
+    }
+
+    .d-row {
+        display: flex;
+        gap: 4px;
+    }
+
+    .d-spacer {
+        width: 48px;
+        /* Reduced from 55px */
+        height: 48px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 5px;
+    }
+
+    .control-btn {
+        width: 48px;
+        /* Reduced from 55px */
+        height: 48px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: rgba(255, 255, 255, 0.8);
+        font-size: 1.2em;
+        /* Adjusted icon size */
+        border-radius: 10px;
+        backdrop-filter: blur(5px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+        user-select: none;
+        transition: background 0.1s;
+    }
+
+    .action-btn {
+        border-radius: 50%;
+        width: 58px;
+        /* Reduced from 65px */
+        height: 58px;
+        background: rgba(255, 255, 255, 0.1);
+        margin-bottom: 5px;
+    }
+
+    #action-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        align-items: center;
+        margin-right: 2px;
+        /* Ensure visual balance */
+    }
+
+    /* --- TIME CONTROLS --- */
+    /* --- TIME CONTROLS (Desktop Style Layout) --- */
+    /* --- TIME CONTROLS (Desktop Style Layout) --- */
+    #ui-container {
+        top: auto;
+        bottom: calc(5px + env(safe-area-inset-bottom, 20px));
+        left: 170px;
+        /* Default for larger screens */
+        right: 90px;
+        width: auto;
+        max-width: none;
+        transform: none;
+        padding: 0;
+        gap: 20px;
+        background: transparent;
+        border: none;
+        display: flex;
+        flex-direction: row;
+        /* Side-by-Side */
+        align-items: flex-end;
+        /* Bottom alignment */
+        justify-content: center;
+        justify-content: center;
+        z-index: 17000;
+        pointer-events: none;
+        touch-action: none !important;
+        /* Prevent page zoom on time controls */
+    }
+
+    /* Small Screen Adaptation (iPhone SE, Mini, etc.) */
+    @media (max-width: 700px) {
+        #ui-container {
+            left: 140px;
+            /* Reduced safe zone from D-Pad */
+            right: 70px;
+            /* Reduced safe zone from Actions */
+            gap: 10px;
+            /* Tighter gap */
+            bottom: 2px;
+        }
+
+        .slider-group {
+            width: 130px !important;
+            /* Shrink slider */
+        }
+
+        #date-display {
+            min-width: 140px !important;
+            /* Shrink date box */
+            font-size: 0.75rem !important;
+            padding: 4px 8px !important;
+        }
+
+        .slider-group label {
+            font-size: 0.8em !important;
+        }
+
+        #time-display {
+            font-size: 0.7rem !important;
+        }
+
+        #pause-time-btn,
+        #reset-date-btn,
+        #real-time-btn {
+            font-size: 0.65rem !important;
+            padding: 4px 8px !important;
+        }
+
+        /* If really small, force scale down */
+        @media (max-width: 600px) {
+            #ui-container {
+                transform: scale(0.9);
+                transform-origin: bottom center;
+                left: 120px;
+                right: 60px;
+            }
+        }
+
+        @media (max-width: 500px) {
+            #ui-container {
+                transform: scale(0.8);
+                left: 110px;
+                right: 50px;
+            }
+        }
+    }
+
+    #ui-container>div {
+        pointer-events: auto;
+    }
+
+    .controls-row {
+        flex-direction: row;
+        width: auto;
+        align-items: flex-end;
+        gap: 20px;
+    }
+
+    /* LEFT GROUP: Slider */
+    .slider-group {
+        order: 1;
+        width: 180px;
+        margin-bottom: 5px;
+        /* Alignment fix */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        /* Left Text Align */
+    }
+
+    /* Restore Label */
+    .slider-group label {
+        display: block;
+        /* Show */
+        font-family: 'Exo 2', sans-serif;
+        font-size: 0.9em;
+        font-weight: bold;
+        color: #fff;
+        margin-bottom: 5px;
+        text-shadow: 0 1px 2px black;
+        width: 100%;
+        text-align: left;
+    }
+
+    #timeSlider {
+        width: 100%;
+        height: 15px;
+        /* Match mobile touch target */
+        margin-bottom: 5px;
+    }
+
+    /* Restore Speed Text */
+    .speed-row {
+        display: block;
+        width: 100%;
+        text-align: left;
+    }
+
+    #time-display {
+        display: block;
+        /* Show */
+        font-size: 0.8rem;
+        color: #aaa;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* RIGHT GROUP: Date & Buttons */
+    .date-group {
+        order: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        /* Right alignment */
+        gap: 5px;
+    }
+
+    /* 1. Date (Top) */
+    #date-display {
+        order: 1;
+        margin-bottom: 5px;
+        width: auto;
+        min-width: 180px;
+        text-align: center;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        padding: 5px 10px;
+    }
+
+    /* 2. Buttons (Bottom) */
+    .time-controls-row {
+        order: 2;
+        justify-content: flex-end;
+        width: auto;
+        margin-bottom: 0;
+        display: flex;
+        gap: 5px;
+    }
+
+    #pause-time-btn,
+    #reset-date-btn,
+    #real-time-btn {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+        height: auto;
+        background: rgba(30, 30, 30, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 8px;
+        color: white;
+    }
+
+    #info-panel {
+        top: 50%;
+        bottom: auto;
+        right: 0;
+        left: auto;
+
+        /* [FIX] More compact for iPhone SE */
+        width: 180px;
+        max-width: 50vw;
+        /* Allow up to 50% width if needed, but start small */
+
+        height: auto;
+        max-height: 85vh;
+        /* Reduce max height to avoid being too tall */
+
+        transform: translate(100%, -50%);
+        border-radius: 15px 0 0 15px;
+        overflow-y: auto;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        z-index: 19000;
+        box-shadow: -5px 0 20px rgba(0, 0, 0, 0.5);
+
+        /* Tighter padding */
+        padding: 12px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+    }
+
+    #info-panel h2 {
+        font-size: 1.1rem;
+        /* Smaller title */
+        margin-bottom: 4px;
+        margin-top: 0;
+    }
+
+    #info-panel p,
+    #info-panel span,
+    #info-panel li {
+        font-size: 0.75rem;
+        /* Tiny body text for max info density */
+        line-height: 1.3;
+        margin-bottom: 3px;
+    }
+
+    /* Reduce space for specific info blocks if they use divs */
+    #info-panel div {
+        margin-bottom: 2px;
+    }
+
+    #info-panel .info-label {
+        font-weight: bold;
+        color: #ddd;
+        font-size: 0.8rem;
+    }
+
+    #info-panel:not(.hidden) {
+        transform: translate(0, -50%);
+        /* Slide in + Centered vertically */
+    }
+
+    /* Move Info Button Down and Hide when Panel is Open */
+    #info-btn {
+        bottom: auto !important;
+        top: 60px !important;
+        /* Moved down to avoid FPS */
+        right: 15px !important;
+        transition: opacity 0.3s;
+    }
+
+    /* Logic to hide button will be handled by class toggle in JS or adjacent sibling if structure allows.
+       For now, we just move it. */
+
+    #info-menu {
+        bottom: auto;
+        top: 60px;
+        /* Aligned with button */
+        right: 15px;
+        transform-origin: top right;
+
+        /* Match Compact Panel Logic */
+        width: 210px;
+        max-width: 35vw;
+        border-radius: 15px;
+        padding: 5px;
+        /* Menu items have their own padding */
+        background: rgba(0, 20, 40, 0.95);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+
+    .info-menu-item {
+        font-size: 0.9rem;
+        /* Compact Font */
+        padding: 10px 15px;
+        /* Compact Touch Target */
+        margin-bottom: 2px;
+        border-radius: 8px;
+    }
+
+    /* Compact Modals for Mobile */
+
+    .info-modal {
+        position: fixed !important;
+        /* Force fixed positioning */
+        width: 90vw !important;
+        max-width: 340px !important;
+        /* Slightly wider */
+        padding: 18px !important;
+
+        /* Robust Centering */
+        top: 50% !important;
+        left: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        margin: 0 !important;
+        /* Remove any default margins interfering */
+
+        max-height: 60vh !important;
+        /* Cap height to leave room */
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch;
+        z-index: 20000 !important;
+        /* Ensure on top */
+    }
+
+    .info-modal h2 {
+        font-size: 1.2rem !important;
+        margin-bottom: 10px !important;
+    }
+
+    .info-modal p,
+    .info-modal li {
+        font-size: 0.85rem !important;
+        /* Smaller text */
+        line-height: 1.4 !important;
+    }
+
+    /* Fixed: Removed destructive list styling that was breaking text flow */
+    .info-modal ul {
+        padding-left: 20px !important;
+        /* Restore padding for bullets */
+    }
+
+    /* --- MUSIC CONTROLS (Mobile Premium) --- */
+    #music-controls-container {
+        flex-direction: column !important;
+        /* Force column on mobile */
+        align-items: center !important;
+    }
+
+    #music-nav-row {
+        display: flex !important;
+        /* Force show on mobile */
+        margin-top: 5px;
+        gap: 20px;
+        /* Stronger gap */
+    }
+
+    .music-nav-btn {
+        width: 50px !important;
+        height: 50px !important;
+        border-radius: 50% !important;
+        background: rgba(20, 20, 30, 0.4) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5) !important;
+        color: white !important;
+        font-size: 1.3rem !important;
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+        /* Bouncy pop */
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding-top: 2px;
+        /* Visual center tweak for emoji/icon */
+    }
+
+    .music-nav-btn:active {
+        transform: scale(0.9) !important;
+        background: rgba(0, 204, 255, 0.2) !important;
+        box-shadow: 0 0 25px rgba(0, 204, 255, 0.5) !important;
+        border-color: rgba(0, 204, 255, 0.6) !important;
+    }
+}
+
+/* --- ORIENTATION LOCK (PORTRAIT BLOCKER) --- */
+#orientation-lock {
+    display: none;
+    /* Hidden by default */
+}
+
+/* Trigger only on Mobile (max-width) AND Portrait Orientation */
+@media only screen and (max-width: 900px) and (orientation: portrait) {
+    body.is-mobile #orientation-lock {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        z-index: 99999;
+        /* Super Top Layer */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        color: white;
+        padding: 0;
+        margin: 0;
+    }
+
+    .lock-content {
+        animation: fadeIn 1s ease;
+    }
+
+    .rotate-gif {
+        width: 150px;
+        height: auto;
+        margin-bottom: 5px;
+    }
+
+    #orientation-lock h2 {
+        font-family: 'Exo 2', sans-serif;
+        color: #00ccff;
+        margin-bottom: 10px;
+    }
+
+
+    #orientation-lock p {
+        font-family: 'Segoe UI', sans-serif;
+        color: #aaa;
+        font-size: 1.1rem;
+    }
+
+    /* Hide the game while locked to save resources/avoid confusion */
+    #ui-container,
+    #mobile-controls,
+    #info-btn {
+        display: none !important;
+    }
+}
+
+/* --- iOS Install Hint Overlay --- */
+.ios-install-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(150%);
+    /* Start hidden below */
+    width: 90%;
+    max-width: 350px;
+    z-index: 99999;
+    /* Top of everything */
+    padding-bottom: 20px;
+    /* Space for arrow */
+    pointer-events: none;
+    transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ios-install-hint.visible {
+    transform: translateX(-50%) translateY(0);
+    pointer-events: auto;
+}
+
+.hint-content {
+    background: rgba(20, 20, 30, 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 20px;
+    display: flex;
+    gap: 15px;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.hint-icon {
+    font-size: 2.5rem;
+}
+
+.hint-text h3 {
+    margin: 0 0 5px 0;
+    color: #00ccff;
+    font-family: 'Exo 2', sans-serif;
+    font-size: 1.1rem;
+}
+
+.hint-text p {
+    margin: 0 0 10px 0;
+    font-size: 0.9rem;
+    color: #ddd;
+    line-height: 1.3;
+}
+
+.hint-instructions {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 0.85rem;
+    color: #bbb;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 8px;
+    border-radius: 8px;
+}
+
+.hint-instructions span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.hint-arrow {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.5rem;
+    color: rgba(20, 20, 30, 0.95);
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    animation: bounceArrow 1.5s infinite;
+}
+
+@keyframes bounceArrow {
+
+    0%,
+    100% {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    50% {
+        transform: translateX(-50%) translateY(5px);
+    }
+}
+
+#close-hint {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    background: none;
+    border: none;
+    color: #666;
+    font-size: 1.5rem;
+    cursor: pointer;
+    z-index: 10;
+}

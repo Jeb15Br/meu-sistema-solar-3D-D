@@ -71,7 +71,7 @@ export const solarSystemData = {
             tilt: 25.2,
             info: { age: "4.5 Bi Anos", type: "Rochoso", desc: "O Planeta Vermelho. Lar de futuros colonizadores?", translation: "687 dias", rotation: "24h 37m", moons: "2" },
             textureMap: 'assets/mars.jpg',
-            moons: [{ name: "Fobos", radius: 0.2, distance: 2.5, speed: 0.3, color: 0x555555 }, { name: "Deimos", radius: 0.15, distance: 3.5, speed: 0.2, color: 0x555555 }]
+            moons: [{ name: "Fobos", radius: 0.2, distance: 2.5, speed: 0.3, color: 0x555555, info: { age: "Unknown", type: "Moon", desc: "Uma pequena lua, possivelmente um asteroide capturado.", translation: "7h 39m", rotation: "Sincrona", moons: "0" } }, { name: "Deimos", radius: 0.15, distance: 3.5, speed: 0.2, color: 0x555555, info: { age: "Unknown", type: "Moon", desc: "A menor das duas luas de Marte.", translation: "30h 18m", rotation: "Sincrona", moons: "0" } }]
         },
         {
             name: "Júpiter",
@@ -84,10 +84,10 @@ export const solarSystemData = {
             info: { age: "4.5 Bi Anos", type: "Gigante Gasoso", desc: "O maior planeta. Uma tempestade eterna chamada Grande Mancha Vermelha.", translation: "12 anos", rotation: "9h 55m", moons: "95" },
             textureMap: 'assets/jupiter.jpg',
             moons: [
-                { name: "Io", radius: 0.6, distance: 8, speed: 0.1, color: 0xffffaa },
-                { name: "Europa", radius: 0.5, distance: 10, speed: 0.08, color: 0xaaffff },
-                { name: "Ganimedes", radius: 0.7, distance: 12, speed: 0.06, color: 0xcccccc },
-                { name: "Calisto", radius: 0.6, distance: 14, speed: 0.04, color: 0x888888 }
+                { name: "Io", radius: 0.6, distance: 8, speed: 0.1, color: 0xffffaa, info: { age: "Unknown", type: "Moon", desc: "O corpo mais vulcanicamente ativo do sistema solar.", translation: "1.8 dias", rotation: "Sincrona", moons: "0" } },
+                { name: "Europa", radius: 0.5, distance: 10, speed: 0.08, color: 0xaaffff, info: { age: "Unknown", type: "Moon", desc: "Superfície de gelo suave, possivelmente escondendo um oceano global.", translation: "3.5 dias", rotation: "Sincrona", moons: "0" } },
+                { name: "Ganimedes", radius: 0.7, distance: 12, speed: 0.06, color: 0xcccccc, info: { age: "Unknown", type: "Moon", desc: "A maior lua do sistema solar, maior que Mercúrio.", translation: "7.1 dias", rotation: "Sincrona", moons: "0" } },
+                { name: "Calisto", radius: 0.6, distance: 14, speed: 0.04, color: 0x888888, info: { age: "Unknown", type: "Moon", desc: "Antiga superfície cheia de crateras.", translation: "16.7 dias", rotation: "Sincrona", moons: "0" } }
             ]
         },
         {
@@ -102,7 +102,7 @@ export const solarSystemData = {
             info: { age: "4.5 Bi Anos", type: "Gigante Gasoso", desc: "Famoso pelos seus anéis deslumbrantes.", translation: "29 anos", rotation: "10h 33m", moons: "146" },
             textureMap: 'assets/saturn.jpg',
             ringMap: 'assets/saturn_rings.png',
-            moons: [{ name: "Titã", radius: 0.8, distance: 9, speed: 0.05, color: 0xffaa00 }]
+            moons: [{ name: "Titã", radius: 0.8, distance: 9, speed: 0.05, color: 0xffaa00, info: { age: "Unknown", type: "Moon", desc: "A única lua com uma atmosfera densa.", translation: "16 dias", rotation: "Sincrona", moons: "0" } }]
         },
         {
             name: "Urano",
@@ -114,7 +114,7 @@ export const solarSystemData = {
             tilt: 98, // Rolling on side
             info: { age: "4.5 Bi Anos", type: "Gigante de Gelo", desc: "Gira de lado. Muito frio.", translation: "84 anos", rotation: "17h 14m", moons: "28" },
             textureMap: 'assets/uranus.jpg',
-            moons: [{ name: "Titânia", radius: 0.4, distance: 6, speed: 0.06, color: 0xdddddd }]
+            moons: [{ name: "Titânia", radius: 0.4, distance: 6, speed: 0.06, color: 0xdddddd, info: { age: "Unknown", type: "Moon", desc: "A maior lua de Urano.", translation: "8.7 dias", rotation: "Sincrona", moons: "0" } }]
         },
         {
             name: "Netuno",
@@ -126,7 +126,7 @@ export const solarSystemData = {
             tilt: 28.3,
             info: { age: "4.5 Bi Anos", type: "Gigante de Gelo", desc: "Ventos supersônicos e muito azul.", translation: "165 anos", rotation: "16h", moons: "16" },
             textureMap: 'assets/neptune.jpg',
-            moons: [{ name: "Tritão", radius: 0.5, distance: 6, speed: 0.05, color: 0xffcccc }]
+            moons: [{ name: "Tritão", radius: 0.5, distance: 6, speed: 0.05, color: 0xffcccc, info: { age: "Unknown", type: "Moon", desc: "Gira na direção oposta à rotação do planeta (retrograda).", translation: "5.8 dias", rotation: "Sincrona", moons: "0" } }]
         }
     ],
     dwarfs: [
