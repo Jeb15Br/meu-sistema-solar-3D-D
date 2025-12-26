@@ -31,7 +31,10 @@ export const MobileManager = {
             // 2. Block Selection Start (Old Android Browser/WebView quirk)
             window.addEventListener('selectstart', blockEvent, { capture: true, passive: false });
 
-            // 3. Force CSS via JS
+            // 3. Block Drag Start (Prevent Image "lifting")
+            window.addEventListener('dragstart', blockEvent, { capture: true, passive: false });
+
+            // 4. Force CSS via JS
             document.documentElement.style.webkitUserSelect = 'none';
             document.documentElement.style.userSelect = 'none';
             document.documentElement.style.webkitTouchCallout = 'none';

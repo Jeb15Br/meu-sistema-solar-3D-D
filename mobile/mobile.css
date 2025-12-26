@@ -10,6 +10,18 @@ body.is-mobile {
         -webkit-tap-highlight-color: transparent !important;
     }
 
+    /* [CRITICAL FIX] "Touch Action: None" tells Android Chrome/Samsung:
+       "Hands off! This app handles all gestures." 
+       This kills "Tap to Search", "Long Press to Select", and "Pull to Refresh". */
+    body,
+    html,
+    canvas,
+    .scene-layer {
+        touch-action: none !important;
+        overscroll-behavior: none !important;
+    }
+
+
     input,
     textarea {
         -webkit-user-select: auto !important;
