@@ -24,11 +24,27 @@ Este projeto foi desenvolvido por **Jeb15Br** com o objetivo de criar uma experi
 
 ## 🎮 Como Usar
 
-### Controles de Câmera
+### Controles de Câmera (Desktop)
 -   **Botão Esquerdo + Arrastar**: Orbitar ao redor do foco.
 -   **Botão Direito + Arrastar**: Mover a câmera (Pan).
 -   **Scroll**: Zoom In / Zoom Out.
 -   **Botão Direito + W/A/S/D**: (Modo Voo Livre) Navegue livremente como uma nave espacial.
+
+## 📱 Suporte Mobile & PWA
+
+O projeto foi totalmente otimizado para dispositivos móveis!
+Para a melhor experiência (Fullscreen real "App-Like"), adicione o site à sua tela inicial:
+
+-   **iOS (Safari)**: Toque em "Compartilhar" ➡️ "Adicionar à Tela de Início".
+-   **Android (Chrome/Edge)**: Abra o menu ➡️ "Adicionar à Tela Inicial" / "Instalar App".
+
+### Controles de Toque
+-   **1 Dedo + Arrastar**: Orbitar ao redor do planeta.
+-   **2 Dedos + Arrastar**: Mover a câmera (Pan lateral/vertical).
+-   **Pinça (Pinch)**: Zoom In / Zoom Out.
+-   **Toque Simples**: Selecionar planeta ou usar botões da UI.
+-   **Swipe Down em Notificações**: Descarta avisos instantaneamente.
+
 
 ### Interação
 -   **Clique**: Seleciona e foca a câmera em um planeta ou lua.

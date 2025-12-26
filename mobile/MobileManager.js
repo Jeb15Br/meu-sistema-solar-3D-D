@@ -71,20 +71,30 @@ export const MobileManager = {
     setupFullscreenHandler: function () {
         if (window.innerWidth > 1024) return; // Only for mobile
 
-        const tempHandler = () => {
-            // Delegate to specific platform manager
-            if (this.platformManager) {
+        const fullscreenReactivator = () => {
+            // [FIX] Check if we are ALREADY in fullscreen
+            const isFullscreen = document.fullscreenElement ||
+                document.webkitFullscreenElement ||
+                document.mozFullScreenElement ||
+                document.msFullscreenElement;
+
+            if (!isFullscreen && this.platformManager) {
+                // If not in fullscreen, try to enter it again on interaction
                 this.platformManager.setupFullscreen();
             }
-
-            // Remove listener after first attempt (success or fail) to avoid annoying the user
-            window.removeEventListener('click', tempHandler);
-            window.removeEventListener('touchend', tempHandler);
         };
 
-        // 'touchstart' is often blocked for fullscreen. 'click' or 'touchend' is safer.
-        window.addEventListener('click', tempHandler);
-        window.addEventListener('touchend', tempHandler);
+        // Keep listener active to allow restoring fullscreen if user exits
+        // Use 'click' as the primary gesture trigger
+        window.addEventListener('click', fullscreenReactivator);
+
+        // Optional: Listen to visibility change to reset/re-check if needed
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible') {
+                // We can't auto-trigger fullscreen here (needs gesture), 
+                // but we know we are back. The next click will handle it.
+            }
+        });
     },
 
     setupMobileControls: function () {
