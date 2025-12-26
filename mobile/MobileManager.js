@@ -30,6 +30,15 @@ export const MobileManager = {
             this.setupFullscreenHandler();
             this.setupMenuCloseHandler();
 
+            // [FIX] Prevent Android Context Menu (Long Press = Copy/Select)
+            // This fixes the issue where holding Earth triggers "Copy Screen" instead of Easter Egg
+            document.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }, { passive: false });
+
+
         } else {
             console.log("💻 Desktop Mode (Mobile layout disabled even if resized)");
             document.body.classList.remove('is-mobile');
