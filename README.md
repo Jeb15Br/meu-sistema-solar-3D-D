@@ -33,7 +33,7 @@ Este projeto foi desenvolvido por **Jeb15Br** com o objetivo de criar uma experi
 ## 📱 Suporte Mobile & PWA
 
 O projeto foi totalmente otimizado para dispositivos móveis!
-Para a melhor experiência (Fullscreen real "App-Like"), adicione o site à sua tela inicial:
+Se você for usuário de iPhone e acessar pelo Safari, para a melhor experiência (Fullscreen real "App-Like"), adicione o site à sua tela inicial (Essa opção está disponível para Android também):
 
 -   **iOS (Safari)**: Toque em "Compartilhar" ➡️ "Adicionar à Tela de Início".
 -   **Android (Chrome/Edge)**: Abra o menu ➡️ "Adicionar à Tela Inicial" / "Instalar App".
